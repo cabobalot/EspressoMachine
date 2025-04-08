@@ -5,13 +5,13 @@ void start_brew(int mode);
 void set_maxpressure(int pressure);
 void set_preinfusetime(int time);
 
-int max_pressure = 172;
+int maxpressure = 172;
 int pre_infuse_time;
 
 
 void set_pressure(int target_pressure) {
-  if (target_pressure >= max_pressure) {
-    target_pressure = max_pressure;
+  if (target_pressure >= maxpressure) {
+    target_pressure = maxpressure;
   }
   
 }
@@ -37,7 +37,7 @@ void start_brew(int mode) {
 
 }
 void set_maxpressure(int max_pressure) {
-  this.maxpressure = max_pressure;
+  maxpressure = max_pressure;
 
 }
 void set_preinfusetime(int time) {

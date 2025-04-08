@@ -26,20 +26,20 @@ const float voltageDividerRatio = 1.515;
 const int numReadings = 20;
 
 
-void setup() {
+// void setup() {
 
-  Serial.begin(115200);
+//   Serial.begin(115200);
 
-  // if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-  //   Serial.println(F("SSD1306 allocation failed"));
-  //   for(;;); // Don't proceed, loop forever
-  // }
+//   // if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+//   //   Serial.println(F("SSD1306 allocation failed"));
+//   //   for(;;); // Don't proceed, loop forever
+//   // }
 
-  delay(2000);
+//   delay(2000);
 
-}
+// }
 
-void loop() {
+int calculatePressure() {
   int i = 0;
   int rawTotalValue = 0;
   int avgValue = 0;
@@ -75,7 +75,8 @@ void loop() {
   
   // testDisplayPressure(psi, bar, measuredVoltage);
   // plotData(sensorValue, bar, psi, voltage);
-  printAvgData(avgValue, psi, bar, measuredVoltage);
+  // printAvgData(avgValue, psi, bar, measuredVoltage);
+  return psi;
 }
 
 
@@ -123,5 +124,3 @@ void printAvgData(float avgSensorValue, float avgPsi, float avgBar, float avgVol
 
 //   delay(100);
 // }
-
-
