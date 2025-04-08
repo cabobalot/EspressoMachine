@@ -1,12 +1,3 @@
-#include <SPI.h>
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-// int screen_width = 128;
-// int screen_height = 64;
-
-// Adafruit_SSD1306 display(screen_width, screen_height, &Wire, -1);
-
 // Sensor parameters
 const int pressurePin = 36;
 const float sensorMinVoltage = 0.5;
@@ -24,20 +15,6 @@ const float voltageDividerRatio = 1.515;
 
 // Averaging constant
 const int numReadings = 20;
-
-
-// void setup() {
-
-//   Serial.begin(115200);
-
-//   // if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-//   //   Serial.println(F("SSD1306 allocation failed"));
-//   //   for(;;); // Don't proceed, loop forever
-//   // }
-
-//   delay(2000);
-
-// }
 
 int calculatePressure() {
   int i = 0;
@@ -73,8 +50,6 @@ int calculatePressure() {
 
   float psi = pressure * 145.038;
   
-  // testDisplayPressure(psi, bar, measuredVoltage);
-  // plotData(sensorValue, bar, psi, voltage);
   // printAvgData(avgValue, psi, bar, measuredVoltage);
   return psi;
 }
@@ -99,28 +74,3 @@ void printAvgData(float avgSensorValue, float avgPsi, float avgBar, float avgVol
   }
 }
 
-// To display to screen
-// void testDisplayPressure(float psi, float bar, float voltage) {
-//   display.clearDisplay();
-
-//   display.setTextSize(1);
-//   display.setCursor(15, 0);
-//   display.println(F("Current Pressure: "));
-//   display.println(F(""));
-
-//   display.setCursor(40, 25);
-//   display.print(psi);
-//   display.println(F(" psi"));
-
-//   display.setCursor(40, 35);
-//   display.print(voltage);
-//   display.println(F(" V"));
-
-//   display.setCursor(40, 45);
-//   display.print(bar);
-//   display.println(F(" bar"));
-
-//   display.display();
-
-//   delay(100);
-// }
