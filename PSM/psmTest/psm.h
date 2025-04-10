@@ -1,50 +1,52 @@
 #ifndef PSM_H
 #define PSM_H
 
-#include <arduino>
+#include "psm.h"
+
+volatile bool zeroCross = false;
+
+IRAM_ATTR static void zeroCrossISR() {
+  zeroCross = true;
+}
 
 class psm {
 private:
-	byte controlPin;
-	byte interruptPin;
+	static byte controlPin;
+	static byte interruptPin;
 
-	const unsigned int range = 127;
-	const unsigned int valueFactor = 4; // precalculated constant 1024 [10 bit ADC resolution] / 128 [range + 1] / 2
+	static const unsigned int range = 127;
+	static const unsigned int valueFactor = 4; // precalculated constant 1024 [10 bit ADC resolution] / 128 [range + 1] / 2
 
-	volatile bool zeroCross = false;
-
-	unsigned int value = 0;
+	static unsigned int value;
 	
-	unsigned int a = 0;
-	bool skip = false;
+	static unsigned int a;
+	static bool skip;
 
-	void zeroCrossISR();
-	void debounceZeroCross();
-	void calculateSkip();
-	void updateControl();
+	static void debounceZeroCross();
+	static void calculateSkip();
+	static void updateControl();
 
 public:
-	psm(byte controlPin, interruptPin);
+	static void config(byte control, byte interrupt);
 
-	void setValue(unsigned int v);
+	static void setValue(unsigned int v);
 
-	void update();
+	static void update();
 };
 
-psm::psm(byte controlPin, interruptPin) {
-	this.controlPin = controlPin;
-	this.interruptPin = interruptPin;
+unsigned int psm::value = 0;
+unsigned int psm::a = 0;
+bool psm::skip = false;
+
+void psm::config(byte control, byte interrupt) {
+	psm::controlPin = control;
+	psm::interruptPin = interrupt;
 
 	pinMode(controlPin, OUTPUT);
 	pinMode(interruptPin, INPUT_PULLUP);
 	attachInterrupt(digitalPinToInterrupt(interruptPin), zeroCrossISR, RISING); // low-to-high transition = start of negative half-wave
 }
 
-
-
-IRAM_ATTR void psm::zeroCrossISR() {
-  zeroCross = true;
-}
 
 void psm::debounceZeroCross() {
   static unsigned long firedTime;
@@ -55,7 +57,6 @@ void psm::debounceZeroCross() {
 
   if (zeroCross) {
     firedTime = millis();
-    intCount++;
     calculateSkip();
     zeroCross = false;
   }
@@ -99,7 +100,7 @@ void psm::updateControl() {
   }
 }
 
-void psm::setValue(int v) {
+void psm::setValue(unsigned int v) {
 	a = 0;
 	value = v;
 }

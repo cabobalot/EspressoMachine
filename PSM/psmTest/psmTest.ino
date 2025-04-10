@@ -4,15 +4,16 @@ const byte valuePin = 32; // potentiometer input
 const byte controlPin = 33; // triac output
 const byte interruptPin = 25; // phase sensing
 
+const unsigned int range = 127;
+	const unsigned int valueFactor = 4;
 
 unsigned long updateDelay = 100;
 unsigned long lastUpdateTime = 0;
 
 unsigned int value = 0;
 
-psm dimmer(controlPin, interruptPin);
-
 void setup() {
+  psm::config(controlPin, interruptPin);
   Serial.begin(115200);
 }
 
@@ -23,7 +24,7 @@ void updateValue() {
 
   if (readValue > (oldValue + valueFactor * 3) || (readValue + valueFactor) < oldValue) { // add some hysteresis to filter out noise
     value = readValue / valueFactor / 2;
-    dimmer.setValue(value);
+    psm::setValue(value);
   }
 }
 
@@ -37,9 +38,9 @@ void loop() {
 
     updateValue();
 
-    unsigned long dif = time - lastUpdateTime;
-    unsigned long intPerSec = (intCount * 1000) / dif;
-    Serial.printf(" int/sec:%i dif:%i\n", intPerSec, dif);
+    // unsigned long dif = time - lastUpdateTime;
+    // unsigned long intPerSec = (intCount * 1000) / dif;
+    // Serial.printf(" int/sec:%i dif:%i\n", intPerSec, dif);
     
     
     // Serial.flush();
@@ -47,14 +48,14 @@ void loop() {
     // intCount = 0;
     // delay(20);
     // Serial.printf("after 20ms, intCount:%i", intCount);
-    // Serial.println();
+    Serial.println();
     
 
-    intCount = 0;
-    lastUpdateTime = time;
+    // intCount = 0;
+    // lastUpdateTime = time;
   }
   
-  dimmer.update();
+  psm::update();
 
 }
 
