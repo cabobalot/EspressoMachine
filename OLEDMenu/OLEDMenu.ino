@@ -53,9 +53,14 @@ void setup() {
 
 void loop() {
     menu.show();
-    currentTemperature = tempSensor.readTemperature();
-    menu.setCurrentTemperature(currentTemperature);
-    //Fake Pressure  
+    static unsigned long lastRead = 0;
+    if (millis() - lastRead > 500) {
+        float t = tempSensor.readTemperature();
+        Serial.println(t);
+        menu.setCurrentTemperature(t);
+        lastRead = millis();
+    }
+ 
     float psiValue = calculatePressure();  // 来自 pressure_sensor.h
     menu.setCurrentPressure(psiValue);
 
