@@ -1,5 +1,9 @@
-#include "psm.hpp"
 #include "pins.h"
+
+#include "psm.hpp"
+#include "tempControl.h"
+#include "pressureControl.h"
+
 
 unsigned long updateDelay = 100;
 unsigned long lastUpdateTime = 0;
@@ -19,15 +23,27 @@ void
 
 
 void loop() {
-  unsigned long time = millis();
-  static unsigned long lastTime;
-  if (time > lastTime + updateDelay) {
-    lastTime = time;
 
-    updateValue();
-  }
-  
-  psm::update();
+
+	tempControl::update();
+	pressureControl::update();
+
+	UI.setDisplayTemp(tempControl.getTemp());
+	UI.update();
+
+	PSM::update();
+
+
+	
+	// unsigned long time = millis();
+	// static unsigned long lastTime;
+	// if (time > lastTime + updateDelay) {
+	// 	lastTime = time;
+
+	// 	updateValue();
+	// }
+
+	
 
 }
 
