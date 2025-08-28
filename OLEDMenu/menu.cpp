@@ -1,6 +1,8 @@
 #include "Menu.h"
+#include "pins.h" 
 
 Menu menu;
+Menu* Menu::_self = nullptr;
 
 Menu::Menu() : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET) {}
 
@@ -10,6 +12,59 @@ bool Menu::begin() {
     }
     display.cp437(true);
     return true;
+}
+bool Menu::beginInput(int pinA, int pinB, int pinBtn) {
+    _self = this;
+    _pinA = pinA; _pinB = pinB; _pinBtn = pinBtn;
+
+    pinMode(_pinA, INPUT);
+    pinMode(_pinB, INPUT);
+    pinMode(_pinBtn, INPUT_PULLUP);
+
+    attachInterrupt(digitalPinToInterrupt(_pinA), Menu::isrAWrapper, CHANGE);
+    return true;
+}
+
+void IRAM_ATTR Menu::isrAWrapper() {
+    if (_self) _self->onAChangeISR();
+}
+
+void IRAM_ATTR Menu::onAChangeISR() {
+    bool a = digitalRead(_pinA);
+    bool b = digitalRead(_pinB);
+    _encUp   = a ? b : !b;
+    _encFired = true;
+}
+
+void Menu::pollInput() {
+    // 旋转事件累计
+    if (_encFired) {
+        _stepAccum += (_encUp ? +1 : -1);
+        _encFired = false;
+    }
+    // 按键去抖（短按）
+    if (!digitalRead(_pinBtn)) {           // 按下
+        if (!_pressed) {
+            _pressed = true;
+            _debounceDeadline = millis() + 50;
+        } else if (millis() > _debounceDeadline) {
+            _clicked = true;               // 记一次点击
+        }
+    } else {
+        _pressed = false;
+    }
+}
+
+int Menu::consumeStep() {
+    int s = _stepAccum;
+    _stepAccum = 0;
+    return s;
+}
+
+bool Menu::consumeClick() {
+    bool c = _clicked;
+    _clicked = false;
+    return c;
 }
 
 void Menu::show() {
@@ -27,10 +82,6 @@ void Menu::show() {
     }
 
     display.display();
-}
-
-void Menu::setCurrentTemperature(float temp) {
-    currentTemperature = temp;
 }
 void Menu::showMainMenu() {
     display.setCursor(0, 0);
@@ -99,6 +150,12 @@ void Menu::moveSelection(bool up) {
     }
 }
 
+void Menu::setCurrentPressure(float psi) {
+    currentPressurePsi = psi;
+}
+void Menu::setCurrentTemperature(float temp) {
+    currentTemperature = temp;
+}
 void Menu::select() {
     if (currentState == MAIN_MENU) {
         if (listSelection == 0) {
@@ -194,10 +251,6 @@ void Menu::showSidebarInfo() {
     display.print("PSI:");
     display.print(currentPressurePsi, 1);
 }
-void Menu::setCurrentPressure(float psi) {
-    currentPressurePsi = psi;
-}
-
 void Menu::showBrewPage() {
     unsigned long now = millis();
     if (now - lastFrameTime > frameInterval) {
