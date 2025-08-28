@@ -5,47 +5,33 @@
 #include "pressureControl.h"
 
 
-unsigned long updateDelay = 100;
-unsigned long lastUpdateTime = 0;
-
-unsigned int value = 0;
-
 void setup() {
   psm::config(PIN_DIMMER_CONTROL, PIN_DIMMER_ZERO_CROSS);
   Serial.begin(115200);
-}
 
-void updateValue() {
-  psm::setValue(64);
+  tempControl::init();
 }
-
-void 
 
 
 void loop() {
+	// Update temperature and setpoint
+	UI.setDisplayTemp(tempControl::getTemperature());
+	tempControl::setTemperature(UI.getTempSetpoint());
 
+	// Update pressure and setpoint
+	UI.setDisplayPresure(pressureControl::getPressure());
+	pressureControl::setPressure(UI.getPressureSetpoint());
+	pressureControl::setMaxPressure(UI.getMaxPressureSetpoint());
+	pressureControl::setPreinfuseTime(UI.getPreinfuseTime());
 
+	// update everything
 	tempControl::update();
 	pressureControl::update();
-
-	UI.setDisplayTemp(tempControl.getTemp());
 	UI.update();
-
 	PSM::update();
 
-
-	
-	// unsigned long time = millis();
-	// static unsigned long lastTime;
-	// if (time > lastTime + updateDelay) {
-	// 	lastTime = time;
-
-	// 	updateValue();
-	// }
-
-	
-
 }
+
 
 
 
