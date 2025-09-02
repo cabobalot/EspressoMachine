@@ -1,25 +1,39 @@
 #include <Arduino.h>
 #include "tempControl.h"
-#include <PID_v1.h>
+#include <PID_v1.h> // PID library
+#include "driver/mcpwm.h" // ESP32 PWM library
+#include "soc/mcpwm_periph.h"
 
-#define PIN_OUTPUT 26
-#define PWM_CHANNEL 0
+#define OUTPUT_PIN 26
 #define PWM_FREQ 1
-#define PWM_RES 7
 
 // Static variables to hold current temp and target
 static double currentTemp = 0.0;
 static double setpoint = 0.0;
 static double outputDuty= 0.0;
 
-static double Kp = 0.1, Ki = 0.1, Kd = 0.1;
+static double Kp = 2.0, Ki = 0.1, Kd = 0.5;
+
+unsigned long prevMillis = 0;
+const unsigned long interval = 1000; 
 
 // PID object from library
 static PID tempPID(&currentTemp, &outputDuty, &setpoint, Kp, Ki, Kd, DIRECT);
 
 void tempControl::init() {
-  ledcAttachChannel(PIN_OUTPUT, PWM_FREQ, PWM_RES, PWM_CHANNEL); // (pin, 1Hz frequency, 7-bit resolution, channel)
+
+  // PID setup
   tempPID.SetMode(AUTOMATIC);
+  tempPID.SetOutputLimits(0, 100);  // clamp output
+
+  // PWM setup
+  mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM1A, OUTPUT_PIN);
+  mcpwm_config_t pwm_config;
+  pwm_config.frequency = PWM_FREQ;
+  pwm_config.cmpr_a = 0.0;
+  pwm_config.counter_mode = MCPWM_UP_COUNTER;
+  pwm_config.duty_mode = MCPWM_DUTY_MODE_0;
+  mcpwm_init(MCPWM_UNIT_0, MCPWM_TIMER_1, &pwm_config);
 }
 
 void tempControl::setSetpoint(float temp){
@@ -33,9 +47,10 @@ void tempControl::setCurrentTemp(float temp){
 void tempControl::setTemperature(float tempSetpoint) {
 
   //PID Controller  
-  tempPID.Compute();
-  // Change Duty Cycle
-  ledcWrite(PWM_CHANNEL, (int)outputDuty);
+  if(tempPID.Compute()) {
+    // Change Duty Cycle
+    mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_1, MCPWM_OPR_A, outputDuty);
+  }
 
 }
 
@@ -49,12 +64,15 @@ float tempControl::getSetpoint(){
 
 
 void tempControl::update() {
+
+    unsigned long currMillis = millis();
+
     if(currMillis - prevMillis >= interval) {
       prevMillis = currMillis;
 
       currentTemp = tempControl::getTemperature(); // grab current temp
       
-      tempControl::setTemperature(targetTemp); // reach that temperature
+      tempControl::setTemperature(setpoint); // reach that temperature
 
     }
 }
