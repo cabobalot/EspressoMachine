@@ -12,7 +12,7 @@ static double currentTemp = 0.0;
 static double setpoint = 0.0;
 static double outputDuty= 0.0;
 
-static double Kp = 2.0, Ki = 0.1, Kd = 0.5;
+static double Kp = 1.1, Ki = 0.01, Kd = 0.01;
 
 unsigned long prevMillis = 0;
 const unsigned long interval = 1000; 
@@ -27,6 +27,8 @@ void tempControl::init() {
   tempPID.SetOutputLimits(0, 100);  // clamp output
 
   // PWM setup
+  mcpwm_timer_set_resolution(MCPWM_UNIT_0, MCPWM_TIMER_1, 60000);
+
   mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM1A, OUTPUT_PIN);
   mcpwm_config_t pwm_config;
   pwm_config.frequency = PWM_FREQ;
@@ -34,6 +36,8 @@ void tempControl::init() {
   pwm_config.counter_mode = MCPWM_UP_COUNTER;
   pwm_config.duty_mode = MCPWM_DUTY_MODE_0;
   mcpwm_init(MCPWM_UNIT_0, MCPWM_TIMER_1, &pwm_config);
+
+  Serial.println(mcpwm_get_frequency(MCPWM_UNIT_0, MCPWM_TIMER_1));
 }
 
 void tempControl::setSetpoint(float temp){
@@ -73,6 +77,14 @@ void tempControl::update() {
       currentTemp = tempControl::getTemperature(); // grab current temp
       
       tempControl::setTemperature(setpoint); // reach that temperature
+
+      //Test code
+      Serial.print("CurrentTemp:");
+      Serial.print(currentTemp, 2);
+      Serial.print(",Setpoint:");
+      Serial.print(setpoint, 2);
+      Serial.print(",PWMOutput:");
+      Serial.println(outputDuty, 2);
 
     }
 }
