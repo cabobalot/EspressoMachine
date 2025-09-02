@@ -51,7 +51,11 @@ public:
     void select();
     void setCurrentTemperature(float temp);
     void setCurrentPressure(float psi);
-
+    //Encoder Function
+    bool beginInput(int pinA, int pinB, int pinBtn);
+    void pollInput();
+    bool consumeClick();  
+    int  consumeStep();  
 private:
     void showSidebarInfo();
     void showMainMenu();
@@ -59,6 +63,22 @@ private:
     void showSettingPage();
     void showTemperatureSetting();
     void showBrewPage();
+    // encoder
+    int _pinA=-1, _pinB=-1, _pinBtn=-1;
+
+    // ISR and numb
+    static void IRAM_ATTR isrAWrapper();
+    static Menu* _self;
+    void IRAM_ATTR onAChangeISR();
+
+    volatile bool _encFired=false;
+    volatile bool _encUp=false;
+    volatile int  _stepAccum=0;
+
+    // select
+    unsigned long _debounceDeadline=0;
+    bool _pressed=false;
+    bool _clicked=false;
 };
 
 extern Menu menu;
