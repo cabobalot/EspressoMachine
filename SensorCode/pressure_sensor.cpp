@@ -27,7 +27,7 @@ int calculatePressure() {
   unsigned long lastTime = 0;
 
   for (i; i < numReadings; i++) {
-    if (millis() - lastTime > 5000) {
+    if (millis() - lastTime > 5) {
       int sensorValue = analogRead(pressurePin);
       rawTotalValue += sensorValue;
       lastTime = millis();
