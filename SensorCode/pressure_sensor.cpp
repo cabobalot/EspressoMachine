@@ -23,11 +23,15 @@ int calculatePressure() {
   int i = 0;
   int rawTotalValue = 0;
   int avgValue = 0;
+  
+  unsigned long lastTime = 0;
 
   for (i; i < numReadings; i++) {
-    delay(5);
-    int sensorValue = analogRead(pressurePin);
-    rawTotalValue += sensorValue;
+    if (millis() - lastTime > 5000) {
+      int sensorValue = analogRead(pressurePin);
+      rawTotalValue += sensorValue;
+      lastTime = millis();
+    }
   }
   avgValue = rawTotalValue / numReadings;
 
