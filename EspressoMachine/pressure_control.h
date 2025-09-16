@@ -1,24 +1,45 @@
-#ifndef PRESSURE_CONTROL_H
-#define PRESSURE_CONTROL_H
-
+#pragma once
+#include <Arduino.h>
 #include <PID_v1.h>
+#include "psm.hpp"
 
 class PressureControl {
 public:
-    PressureControl();
+  // 执行端与 PID 的基本参数
+  static constexpr uint32_t kCtrlMs   = 50;     // 控制周期 50ms
+  static constexpr uint16_t kPsmRange = 127;    // PSM 档位（按你的 psm 实现改）
 
-    void setTarget(double psi);
-    double getTarget() const;
-    double getPressure() const;
+  PressureControl(double kp, double ki, double kd);
 
-    double update();   // 每个周期调用，返回输出百分比
+  void init(uint8_t controlPin, uint8_t zeroCrossPin);   // 初始化：PID + PSM
+  void setSetpoint(double psi);
+  void setCurrentPressure(double psi);
+
+  double setPressure(double setPsi);
+
+  void update();
+
+  double getPressure()  const { return currentPsi_; }
+  double getSetpoint()  const { return setpointPsi_; }
+  double getOutputPct() const { return outputPct_; }
 
 private:
-    double targetPsi;
-    double currentPsi;
-    double output;     // PID 输出
+  // PID 变量
+  double currentPsi_  = 0.0;
+  double setpointPsi_ = 0.0;
+  double outputPct_   = 0.0;
 
-    PID pid;           // 使用 Arduino PID_v1 库
+  // PID 控制器
+  PID pid_;
+
+  // 调度
+  unsigned long prevMs_ = 0;
+
+
+  // 把 0..100% 映射到 PSM 档位（0..kPsmRange）
+  static inline uint16_t pctToPsm(double pct) {
+    if (!isfinite(pct)) pct = 0;
+    if (pct < 0) pct = 0; if (pct > 100) pct = 100;
+    return (uint16_t)lround(pct * kPsmRange / 100.0);
+  }
 };
-
-#endif
