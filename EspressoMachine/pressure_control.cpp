@@ -1,24 +1,52 @@
 #include "pressure_control.h"
-#include "pressure_sensor.h"
-#include <Arduino.h>
 
-PressureControl::PressureControl()
-  : targetPsi(0), currentPsi(0), output(0),
-    pid(&currentPsi, &output, &targetPsi, 0.8, 0.1, 0.0, DIRECT)
-{
-    pid.SetOutputLimits(0, 100);   // 输出范围 0–100 %
-    pid.SetSampleTime(50);         // 50 ms 一次
-    pid.SetMode(AUTOMATIC);        // 启动 PID
+PressureControl::PressureControl(double kp, double ki, double kd)
+: pid_(&currentPsi_, &outputPct_, &setpointPsi_, kp, ki, kd, DIRECT) {
+  // 输出范围限定为单向（只能“加压/加热”）
+  pid_.SetOutputLimits(0, 100);         // 0..100 %
+  pid_.SetSampleTime(kCtrlMs);          // 与调度周期一致
 }
 
-void PressureControl::setTarget(double psi) { targetPsi = psi; }
-double PressureControl::getTarget() const { return targetPsi; }
-double PressureControl::getPressure() const { return currentPsi; }
+void PressureControl::init(uint8_t controlPin, uint8_t zeroCrossPin) {
+  // 初始化 PSM（零过零整周跳变调功）
+  psm::config(controlPin, zeroCrossPin);
 
-double PressureControl::update() {
-    double raw = calculatePressure();
-    currentPsi = 0.85 * currentPsi + 0.15 * raw;
-    pid.Compute();
-    //return a percentage 
-    return output;
+  // 启动 PID 自动模式
+  pid_.SetMode(AUTOMATIC);
+
+  // 初始输出清零
+  outputPct_ = 0;
+  psm::setValue(0);
+}
+
+void PressureControl::setSetpoint(double psi) {
+  setpointPsi_ = psi;
+}
+
+void PressureControl::setCurrentPressure(double psi) {
+  currentPsi_ = psi;
+}
+double PressureControl::setPressure(double setPsi) {
+  setSetpoint(setPsi);
+  pid_.Compute();   // 计算 0..100%
+
+  // 把百分比送给 dimmer（PSM）
+  const uint16_t v = pctToPsm(outputPct_);
+  psm::setValue(v);
+
+  return outputPct_;
+}
+
+void PressureControl::update() {
+  const unsigned long now = millis();
+
+  if (now - prevMs_ >= kCtrlMs) {
+    prevMs_ = now;
+
+    // 执行一次 PID -> PSM
+    setPressure(setpointPsi_);
+  }
+
+  // PSM 需要每圈都 update 来跟过零节拍
+  psm::update();
 }
