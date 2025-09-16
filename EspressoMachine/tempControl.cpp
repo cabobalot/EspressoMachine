@@ -12,7 +12,7 @@ static double currentTemp = 0.0;
 static double setpoint = 0.0;
 static double outputDuty= 0.0;
 
-static double Kp = 7.0, Ki = 1.5, Kd = 3.0;
+static double Kp = 1.1, Ki = 0.01, Kd = 0.01;
 
 unsigned long prevMillis = 0;
 const unsigned long interval = 1000; 
@@ -79,14 +79,12 @@ void tempControl::update() {
       tempControl::setTemperature(setpoint); // reach that temperature
 
       //Test code
-      Serial.print("CurrentTemp:");
-      Serial.print(currentTemp, 2);
-      Serial.print(",Setpoint:");
-      Serial.print(setpoint, 2);
-      Serial.print(",PWMOutput:");
-      Serial.println(outputDuty, 2);
+    //   Serial.print("CurrentTemp:");
+    //   Serial.print(currentTemp, 2);
+    //   Serial.print(",Setpoint:");
+    //   Serial.print(setpoint, 2);
+    //   Serial.print(",PWMOutput:");
+    //   Serial.println(outputDuty, 2);
 
     }
 }
-
-
