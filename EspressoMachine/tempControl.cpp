@@ -12,7 +12,7 @@ static double currentTemp = 0.0;
 static double setpoint = 0.0;
 static double outputDuty= 0.0;
 
-static double Kp = 1.1, Ki = 0.01, Kd = 0.01;
+static double Kp = 7.0, Ki = 1.5, Kd = 3.0;
 
 unsigned long prevMillis = 0;
 const unsigned long interval = 1000; 
