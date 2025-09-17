@@ -1,3 +1,5 @@
 #auto_saved_files#
 GaggiaSchematic/GaggiaSchematic-backups/
 *.json
+!arduino.json
+build/

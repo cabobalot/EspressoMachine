@@ -1,4 +1,4 @@
-#include "temp_sensor.hpp"
+#include "temp_sensor.h"
 
 // Pin assignments
 const int Temp_Clk = 18;
