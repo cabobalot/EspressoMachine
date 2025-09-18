@@ -20,22 +20,30 @@ void setup() {
     for(;;);
   }
   //temp
-  tempControl::init(); 
+  tempControl::init();
   //presure
   pinMode(PIN_PRESSURE_SENSE, INPUT);
   pc.init(PIN_DIMMER_CONTROL, PIN_DIMMER_ZERO_CROSS);
   //temporary init
-  pc.setSetpoint(40.0);
+  pc.setSetpoint(0.0);
 
-  pc.setCurrentPressure(20.0);
   menu.beginInput(PIN_KNOB_ROTATE_A, PIN_KNOB_ROTATE_B, PIN_KNOB_BUTTON);
+
+  pinMode(PIN_SWITCH_BREW, INPUT_PULLDOWN);
 }
 
 void loop() {
-  menu.pollInput();
-  menu.show();
+  static unsigned long TIME_START = 0;
+  static unsigned long TIME_END = 0;
 
-  int step = menu.consumeStep();    
+  menu.pollInput();
+  
+  TIME_START = millis();
+  menu.show();   //TODO this takes too long and blocks... :(
+  TIME_END = millis();
+  
+
+  int step = menu.consumeStep();
   if (step != 0) menu.moveSelection(step > 0);
   if (menu.consumeClick()) menu.select();
   //temperature 
@@ -43,10 +51,29 @@ void loop() {
   tempControl::setSetpoint(spC);
   //pressure
   double sp = (double)menu.getTargetPressure();
-  pc.setSetpoint(sp);
+
+  // pc.setSetpoint(sp);
+  if (digitalRead(PIN_SWITCH_BREW)) {
+    pc.setSetpoint(sp);
+  }
+  else {
+    pc.setSetpoint(0);
+  }
+  
 
   pc.update();
   menu.setCurrentTemperature(tempControl::getTemperature());  
   menu.setCurrentPressure(pc.getPressure());
+
+  tempControl::update();
+
+  
+  
+  static unsigned long TIME_LAST_PRINT = 0;
+  if (millis() - TIME_LAST_PRINT >= 1000) {
+    TIME_LAST_PRINT = millis();
+    Serial.print("last time:");
+    Serial.println(TIME_END - TIME_START);
+  }
 
 }

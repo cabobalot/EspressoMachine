@@ -79,7 +79,6 @@ void psm::updateControl() {
 void psm::setValue(unsigned int v) {
 	a = 0;
 	value = v;
-  Serial.println(v);
 }
 
 

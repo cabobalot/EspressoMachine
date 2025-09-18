@@ -74,7 +74,7 @@ void tempControl::update() {
     if(currMillis - prevMillis >= interval) {
       prevMillis = currMillis;
 
-      currentTemp = tempControl::getTemperature(); // grab current temp
+      currentTemp = TemperatureSensor::getTemperature(); // grab current temp
       
       tempControl::setTemperature(setpoint); // reach that temperature
 

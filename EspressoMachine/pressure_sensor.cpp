@@ -2,7 +2,6 @@
 #include "pressure_sensor.h"
 #include <Arduino.h>
 
-unsigned long prevMs_ = 0;
 // Sensor parameters
 const int pressurePin = 36;
 const float sensorMinVoltage = 0.5;
@@ -54,6 +53,10 @@ int calculatePressure() {
   int i = 0;
   int rawTotalValue = 0;
   static int avgValue;
+  static float bar = 0;
+  static float psi = 0;
+  static unsigned long prevMs_ = 0;
+
   const unsigned long now = millis();
 
   //update every 3ms
@@ -61,26 +64,25 @@ int calculatePressure() {
     prevMs_ = now;
 
     avgValue = readAveragedAdc();
+    // Convert ADC value to ESP pin voltage (0-3.3V)
+    float measuredVoltage = (avgValue / adcResolution) * maxVoltage;
+    
+    // Calculate the actual sensor output voltage (accounting for voltage divider)
+    float actualVoltage = measuredVoltage * voltageDividerRatio;
+    
+    // Scale the reading to actual pressure in MPa
+    float pressureRange = mPaMax - pressureMin;
+    float voltageRange = sensorMaxVoltage - sensorMinVoltage;
+    
+    float pressure = ((actualVoltage - sensorMinVoltage) * pressureRange / voltageRange) + pressureMin; // in mPa
+    
+    // Ensure pressure is within expected range (for sanity checking)
+    pressure = constrain(pressure, pressureMin, mPaMax);
+
+    // Conversion to bar and PSI
+    bar = pressure * 10;
+    psi = pressure * 145.038;
   }
-
-  // Convert ADC value to ESP pin voltage (0-3.3V)
-  float measuredVoltage = (avgValue / adcResolution) * maxVoltage;
-  
-  // Calculate the actual sensor output voltage (accounting for voltage divider)
-  float actualVoltage = measuredVoltage * voltageDividerRatio;
-  
-  // Scale the reading to actual pressure in MPa
-  float pressureRange = mPaMax - pressureMin;
-  float voltageRange = sensorMaxVoltage - sensorMinVoltage;
-  
-  float pressure = ((actualVoltage - sensorMinVoltage) * pressureRange / voltageRange) + pressureMin; // in mPa
-  
-  // Ensure pressure is within expected range (for sanity checking)
-  pressure = constrain(pressure, pressureMin, mPaMax);
-
-  // Conversion to bar and PSI
-  float bar = pressure * 10;
-  float psi = pressure * 145.038;
   
   // printAvgData(avgValue, psi, bar, measuredVoltage);
   return psi;

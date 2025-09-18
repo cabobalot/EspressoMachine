@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <PID_v1.h>
 #include "psm.hpp"
+#include "pressure_sensor.h"
 
 class PressureControl {
 public:
@@ -13,9 +14,9 @@ public:
 
   void init(uint8_t controlPin, uint8_t zeroCrossPin);   // 初始化：PID + PSM
   void setSetpoint(double psi);
-  void setCurrentPressure(double psi);
+  // void setCurrentPressure(double psi);
 
-  double setPressure(double setPsi);
+  // double setPressure(double setPsi);
 
   void update();
 
