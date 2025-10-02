@@ -4,6 +4,9 @@
 #include "psm.hpp"
 #include "pressure_sensor.h"
 
+
+#define MAX_PRESSURE 
+
 class PressureControl {
 public:
   // 执行端与 PID 的基本参数
@@ -14,9 +17,9 @@ public:
 
   void init(uint8_t controlPin, uint8_t zeroCrossPin);   // 初始化：PID + PSM
   void setSetpoint(double psi);
-  // void setCurrentPressure(double psi);
-
-  // double setPressure(double setPsi);
+  
+  void setAlwaysOn();
+  void setAlwaysOff();
 
   void update();
 
