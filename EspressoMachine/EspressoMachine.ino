@@ -10,7 +10,7 @@
 #define TEMPERATURE_OFFSET 7 // stock calibration offset
 
 TemperatureSensor tempSensor;
-PressureControl pc(1.4, 0.0, 0.05); //TODO try setting the pid loop delay to 16 or 17ms
+PressureControl pc(5, 0.0, 0.1); //TODO try setting the pid loop delay to 16 or 17ms
 // also test in steam mode
 
 TaskHandle_t mainTask;
@@ -34,7 +34,7 @@ enum MachineState {
   BREW_STATE,
   STEAM_STATE,
   HOT_WATER_STATE
-}
+};
 
 static volatile MachineState machineState = IDLE_STATE;
 
@@ -54,7 +54,7 @@ void setup() {
   pinMode(PIN_PRESSURE_SENSE, INPUT);
   pc.init(PIN_DIMMER_CONTROL, PIN_DIMMER_ZERO_CROSS);
   //temporary init
-  pc.setSetpoint(0.0);
+  pc.setAlwaysOff();
 
   menu.beginInput(PIN_KNOB_ROTATE_A, PIN_KNOB_ROTATE_B, PIN_KNOB_BUTTON);
 
@@ -81,12 +81,12 @@ void uiLoop(void * pvParameters) {
     if (menu.consumeClick()) menu.select();
     
 
-    targetTemperature = menu.getTargetTemperature();
+    targetTemperature = menu.getTargetTemperature() + TEMPERATURE_OFFSET;
     targetPressure = menu.getTargetPressure();
     // preinfusePressure = menu.getPreinfusePressure();
     // preinfuseTime = menu.getPreinfuseTime();
 
-    menu.setCurrentTemperature(currentTemperature);
+    menu.setCurrentTemperature(currentTemperature - TEMPERATURE_OFFSET);
     menu.setCurrentPressure(currentPressure);
 
 
@@ -131,7 +131,7 @@ void uiLoop(void * pvParameters) {
 void mainLoop(void * pvParameters) {
   for(;;) {
 
-    switch (MachineState) {
+    switch (machineState) {
     case IDLE_STATE:
       pc.setAlwaysOff();
       digitalWrite(PIN_SOLENOID, LOW);
@@ -149,7 +149,7 @@ void mainLoop(void * pvParameters) {
       digitalWrite(PIN_SOLENOID, LOW);
     }
 
-    tempControl::setSetpoint(targetTemperature + TEMPERATURE_OFFSET); // screen returns a different temperature for each mode
+    tempControl::setSetpoint(targetTemperature); // screen returns a different temperature for each mode
     currentTemperature = tempControl::getTemperature();
 
     currentPressure = pc.getPressure();
@@ -159,7 +159,7 @@ void mainLoop(void * pvParameters) {
     tempControl::update();
 
     
-    TIME_END = millis();
+    // TIME_END = millis();
     
     static unsigned long TIME_LAST_PRINT = 0;
     if (millis() - TIME_LAST_PRINT >= 210) {

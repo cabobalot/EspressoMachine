@@ -10,7 +10,7 @@
 class PressureControl {
 public:
   // 执行端与 PID 的基本参数
-  static constexpr uint32_t kCtrlMs   = 50;     // 控制周期 50ms
+  static constexpr uint32_t kCtrlMs   = 17;     // 控制周期 50ms
   static constexpr uint16_t kPsmRange = 127;    // PSM 档位（按你的 psm 实现改）
 
   PressureControl(double kp, double ki, double kd);
