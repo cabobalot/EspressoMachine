@@ -37,7 +37,7 @@ private:
     uint8_t temperature = 70;
     float currentTemperature = 0; 
     float currentPressurePsi = 0.0;
-    float targetPressurePsi = 40.0f;
+    float targetPressurePsi = 90.0f;
     bool isEditingPressure    = false;
     bool isEditingTemperature = false;
     //count for brew screen

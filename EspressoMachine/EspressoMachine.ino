@@ -10,7 +10,8 @@
 #define TEMPERATURE_OFFSET 7 // stock calibration offset
 
 TemperatureSensor tempSensor;
-PressureControl pc(1.1, 0.1, 0.1);
+PressureControl pc(1.4, 0.0, 0.05); //TODO try setting the pid loop delay to 16 or 17ms
+// also test in steam mode
 
 TaskHandle_t mainTask;
 TaskHandle_t uiTask;
@@ -63,8 +64,8 @@ void setup() {
   pinMode(PIN_SOLENOID, OUTPUT);
   digitalWrite(PIN_SOLENOID, LOW);
 
-  xTaskCreate(uiLoop, "uiLoop", 10000, NULL, 2, &uiTask);
-  xTaskCreate(mainLoop, "mainLoop", 10000, NULL, 2, &uiTask);
+  xTaskCreate(uiLoop, "uiLoop", 10000, NULL, 0, &uiTask);
+  xTaskCreate(mainLoop, "mainLoop", 10000, NULL, 0, &uiTask);
 
 }
 
@@ -158,17 +159,32 @@ void mainLoop(void * pvParameters) {
     tempControl::update();
 
     
-    // static unsigned long TIME_START = 0;
-    // static unsigned long TIME_END = 0;
-    // TIME_START = millis();
-    // TIME_END = millis();
-    // static unsigned long TIME_LAST_PRINT = 0;
-    // if (millis() - TIME_LAST_PRINT >= 1000) {
-    //   TIME_LAST_PRINT = millis();
-    //   Serial.print("last time:");
-    //   Serial.println(TIME_END - TIME_START);
-    // }
+    TIME_END = millis();
+    
+    static unsigned long TIME_LAST_PRINT = 0;
+    if (millis() - TIME_LAST_PRINT >= 210) {
+      TIME_LAST_PRINT = millis();
+      // Serial.print("last time:");
+      // Serial.println(TIME_END - TIME_START);
 
+      // Serial.printf("temp:%.1f, tempset:%.1f, pres:%.1f, pressSet:%.1f\r\n", currentTemperature, targetTemperature, currentPressure, targetPressure);
+
+
+      Serial.print(">temp:");
+      Serial.print(currentTemperature, 2);
+      Serial.print(",tempset:");
+      Serial.print(targetTemperature, 2);
+      Serial.print(",pres:");
+      Serial.print(currentPressure, 2);
+      Serial.print(",pressSet:");
+      Serial.println(targetPressure, 2);
+
+      // Serial.flush();
+    }
+
+    
+
+    // taskYIELD(); // do we need this or is yield() fine?
     yield();
   }
 }
