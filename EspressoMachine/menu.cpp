@@ -102,7 +102,7 @@ void Menu::showMainMenu() {
 
 void Menu::moveSelection(bool up) {
   if (currentState == SETTING_PAGE && isEditingTemperature) {
-        if (up && temperature < 100) temperature++;
+        if (up && temperature < 140) temperature++;
         if (!up && temperature > 30) temperature--;
         return;
     }

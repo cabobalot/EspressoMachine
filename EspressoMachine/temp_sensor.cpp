@@ -5,6 +5,7 @@ const int Temp_Clk = 18;
 const int Temp_Cs = 5;
 const int Temp_So = 19;
 
+//TODO are we ok that this library uses software SPI??
 MAX6675 TemperatureSensor::thermocouple = MAX6675(Temp_Clk, Temp_Cs, Temp_So);
 float TemperatureSensor::temperature = 0;
 
