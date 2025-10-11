@@ -6,50 +6,35 @@
 const char* ssid = "Bean-Team-ESP";
 const char* password = "";
 
+// Web server running on port 80
 WiFiServer server(80);
 
-String temperatureValues[] = {"22.5 &#8451;", "25.0 &#8451;", "23.0 &#8451;", "24.5 &#8451;"};
-String pressureValues[] = {"10.41 psi", "22.4 psi", "70.0 psi", "65.6 psi"};
+String temperatureValue = "0.0 &#8451;";
+String pressureValue = "0.0 psi";
 
 String temperatureSetpoint = "81.7 &#8451;";
 String pressureSetpoint = "71.2 psi";
 
-int tempIndex = 0;  // Index for current temperature value
-int pressureIndex = 0;  // Index for current pressure value
-
-// Time interval for cycling through values (in milliseconds)
-unsigned long previousMillis = 0;
-const long interval = 500;  // 0.5 second
-
 void dataWebPage::init() {
   Serial.begin(115200);
 
-  Serial.print("Setting AP...");
-
-  //Access Point
+  // Set up the Access Point with provided SSID and password
   WiFi.softAP(ssid, password);
-
-  IPAddress IP = WiFi.softAPIP();
-  Serial.print("AP IP Address: ");
-  Serial.println(IP);
 
   // Start the server
   server.begin();
 }
 
 void dataWebPage::update(float temp, float pressure, float tempSetPoint, float pressureSetPoint){
+  
+  temperatureValue = String(temp);
+  pressureValue = String(pressure);
+  temperatureSetpoint = String(tempSetPoint);
+  pressureSetpoint = String(pressureSetPoint);
+
   WiFiClient client = server.available();   // Listen for incoming clients
 
-  // Handle timing for cycling through the values
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis;  // Save the last time we cycled
-    tempIndex = (tempIndex + 1) % (sizeof(temperatureValues) / sizeof(temperatureValues[0]));  // Rotate through temperature values
-    pressureIndex = (pressureIndex + 1) % (sizeof(pressureValues) / sizeof(pressureValues[0]));  // Rotate through pressure values
-  }
-
-  if (client) {                             // If a new client connects,
-    Serial.println("New Client.");          // Print a message on the serial monitor
+  if (client) {                           
     // Read the HTTP request
     String request = client.readStringUntil('\r');
     client.flush();
@@ -61,7 +46,7 @@ void dataWebPage::update(float temp, float pressure, float tempSetPoint, float p
       client.println("Content-type:text/plain");
       client.println("Connection: close");
       client.println();
-      client.println(temperatureValues[tempIndex]);
+      client.println(temperatureValue);
     }
     else if (request.indexOf("GET /sensor/pressure") >= 0) {
       // Send pressure data only
@@ -69,7 +54,7 @@ void dataWebPage::update(float temp, float pressure, float tempSetPoint, float p
       client.println("Content-type:text/plain");
       client.println("Connection: close");
       client.println();
-      client.println(pressureValues[pressureIndex]);
+      client.println(pressureValue);
     }
     else {
       // Send the main HTML page
@@ -98,8 +83,8 @@ void dataWebPage::update(float temp, float pressure, float tempSetPoint, float p
       client.println("<h1>Sensor Data</h1>");
       client.println("<table>");
       client.println("<tr><th>Sensor</th><th>Current Value</th><th>Setpoint</th></tr>");
-      client.println("<tr><td>Temperature</td><td><span id=\"tempValue\">" + temperatureValues[tempIndex] + "</span></td><td class=\"setpoint\">" + temperatureSetpoint + "</td></tr>");
-      client.println("<tr><td>Pressure</td><td><span id=\"pressureValue\">" + pressureValues[pressureIndex] + "</span></td><td class=\"setpoint\">" + pressureSetpoint + "</td></tr>");
+      client.println("<tr><td>Temperature</td><td><span id=\"tempValue\">" + temperatureValue + "</span></td><td class=\"setpoint\">" + temperatureSetpoint + "</td></tr>");
+      client.println("<tr><td>Pressure</td><td><span id=\"pressureValue\">" + pressureValue + "</span></td><td class=\"setpoint\">" + pressureSetpoint + "</td></tr>");
       client.println("</table>");
 
       // Temperature graph 
@@ -117,7 +102,6 @@ void dataWebPage::update(float temp, float pressure, float tempSetPoint, float p
       client.println("const pressureData = [];");
 
       client.println("function parseValue(str) {");
-      client.println("  // Extract numeric part from string like '22.5 ℃' or '10.41 psi'");
       client.println("  return parseFloat(str);");
       client.println("}");
 
