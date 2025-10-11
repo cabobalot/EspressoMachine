@@ -9,11 +9,10 @@ const char* password = "";
 // Web server running on port 80
 WiFiServer server(80);
 
-String temperatureValue = "0.0 &#8451;";
-String pressureValue = "0.0 psi";
-
-String temperatureSetpoint = "81.7 &#8451;";
-String pressureSetpoint = "71.2 psi";
+String temperatureValue = "0.0";
+String pressureValue = "0.0";
+String temperatureSetpoint = "81.7";
+String pressureSetpoint = "71.2";
 
 void dataWebPage::init() {
   Serial.begin(115200);
@@ -27,10 +26,10 @@ void dataWebPage::init() {
 
 void dataWebPage::update(float temp, float pressure, float tempSetPoint, float pressureSetPoint){
   
-  temperatureValue = String(temp);
-  pressureValue = String(pressure);
-  temperatureSetpoint = String(tempSetPoint);
-  pressureSetpoint = String(pressureSetPoint);
+  temperatureValue = String(temp, 1);
+  pressureValue = String(pressure, 1);
+  temperatureSetpoint = String(tempSetPoint, 1);
+  pressureSetpoint = String(pressureSetPoint, 1);
 
   WiFiClient client = server.available();   // Listen for incoming clients
 
@@ -40,21 +39,21 @@ void dataWebPage::update(float temp, float pressure, float tempSetPoint, float p
     client.flush();
 
     // Check what type of request this is
-    if (request.indexOf("GET /sensor/temp") >= 0) {
-      // Send temperature data only
+    if (request.indexOf("GET /data") >= 0) {
+      // Send all data as JSON
       client.println("HTTP/1.1 200 OK");
-      client.println("Content-type:text/plain");
+      client.println("Content-type:application/json");
       client.println("Connection: close");
       client.println();
-      client.println(temperatureValue);
-    }
-    else if (request.indexOf("GET /sensor/pressure") >= 0) {
-      // Send pressure data only
-      client.println("HTTP/1.1 200 OK");
-      client.println("Content-type:text/plain");
-      client.println("Connection: close");
-      client.println();
-      client.println(pressureValue);
+      client.print("{\"temp\":");
+      client.print(temperatureValue);
+      client.print(",\"pressure\":");
+      client.print(pressureValue);
+      client.print(",\"tempSet\":");
+      client.print(temperatureSetpoint);
+      client.print(",\"pressureSet\":");
+      client.print(pressureSetpoint);
+      client.println("}");
     }
     else {
       // Send the main HTML page
@@ -64,7 +63,7 @@ void dataWebPage::update(float temp, float pressure, float tempSetPoint, float p
       client.println();
 
       // Send the HTML page with the initial content
-      client.println("<html><head>");
+      client.println("<!DOCTYPE html><html><head>");
       client.println("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
       client.println("<style>");
       client.println("body { font-family: Monaco, monospace; background-color: #fdf5e6; color: #111; text-align: center; padding: 10px; }");
@@ -83,33 +82,39 @@ void dataWebPage::update(float temp, float pressure, float tempSetPoint, float p
       client.println("<h1>Sensor Data</h1>");
       client.println("<table>");
       client.println("<tr><th>Sensor</th><th>Current Value</th><th>Setpoint</th></tr>");
-      client.println("<tr><td>Temperature</td><td><span id=\"tempValue\">" + temperatureValue + "</span></td><td class=\"setpoint\">" + temperatureSetpoint + "</td></tr>");
-      client.println("<tr><td>Pressure</td><td><span id=\"pressureValue\">" + pressureValue + "</span></td><td class=\"setpoint\">" + pressureSetpoint + "</td></tr>");
+      client.println("<tr><td>Temperature</td><td><span id=\"tempValue\">0.0</span> &#8451;</td><td class=\"setpoint\"><span id=\"tempSetpoint\">0.0</span> &#8451;</td></tr>");
+      client.println("<tr><td>Pressure</td><td><span id=\"pressureValue\">0.0</span> psi</td><td class=\"setpoint\"><span id=\"pressureSetpoint\">0.0</span> psi</td></tr>");
       client.println("</table>");
 
       // Temperature graph 
       client.println("<h2>Temperature Graph</h2>");
+      client.println("<div style='text-align:center; margin-bottom:10px;'>");
+      client.println("<span style='margin-right:20px;'><svg width='30' height='3' style='vertical-align:middle;'><line x1='0' y1='1.5' x2='30' y2='1.5' stroke='#ff5733' stroke-width='3'/></svg> <span style='vertical-align:middle;'>Current</span></span>");
+      client.println("<span><svg width='30' height='3' style='vertical-align:middle;'><line x1='0' y1='1.5' x2='30' y2='1.5' stroke='#ff5733' stroke-width='2' stroke-dasharray='5,5'/></svg> <span style='vertical-align:middle;'>Setpoint</span></span>");
+      client.println("</div>");
       client.println("<svg id='tempGraph' width='600' height='350' style='background:#f0f0f0; border:4px solid #987654;'></svg>");
 
       // Pressure graph 
       client.println("<h2>Pressure Graph</h2>");
+      client.println("<div style='text-align:center; margin-bottom:10px;'>");
+      client.println("<span style='margin-right:20px;'><svg width='30' height='3' style='vertical-align:middle;'><line x1='0' y1='1.5' x2='30' y2='1.5' stroke='#3377ff' stroke-width='3'/></svg> <span style='vertical-align:middle;'>Current</span></span>");
+      client.println("<span><svg width='30' height='3' style='vertical-align:middle;'><line x1='0' y1='1.5' x2='30' y2='1.5' stroke='#3377ff' stroke-width='2' stroke-dasharray='5,5'/></svg> <span style='vertical-align:middle;'>Setpoint</span></span>");
+      client.println("</div>");
       client.println("<svg id='pressureGraph' width='600' height='350' style='background:#f0f0f0; border:4px solid #987654;'></svg>");
 
       // JS
       client.println("<script>");
-      client.println("const maxPoints = 20;");  // number of points shown in graph
+      client.println("const maxPoints = 20;");
       client.println("const tempData = [];");
       client.println("const pressureData = [];");
+      client.println("const tempSetpointData = [];");
+      client.println("const pressureSetpointData = [];");
 
-      client.println("function parseValue(str) {");
-      client.println("  return parseFloat(str);");
-      client.println("}");
-
-      client.println("function drawGraph(svgId, data, yMin, yMax, strokeColor) {");
+      client.println("function drawGraph(svgId, data, setpointData, yMin, yMax, strokeColor, setpointColor) {");
       client.println("  const svg = document.getElementById(svgId);");
       client.println("  const width = svg.clientWidth;");
       client.println("  const height = svg.clientHeight;");
-      client.println("  svg.innerHTML = '';"); // clear previous graph");
+      client.println("  svg.innerHTML = '';");
       client.println("  if(data.length < 2) return;");
 
       client.println("  const points = data.map((val, idx) => {");
@@ -118,7 +123,6 @@ void dataWebPage::update(float temp, float pressure, float tempSetPoint, float p
       client.println("    return x + ',' + y;");
       client.println("  }).join(' ');");
 
-      client.println("  // Draw polyline");
       client.println("  const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');");
       client.println("  polyline.setAttribute('fill', 'none');");
       client.println("  polyline.setAttribute('stroke', strokeColor);");
@@ -126,7 +130,21 @@ void dataWebPage::update(float temp, float pressure, float tempSetPoint, float p
       client.println("  polyline.setAttribute('points', points);");
       client.println("  svg.appendChild(polyline);");
 
-      client.println("  // Draw axis line");
+      client.println("  if (setpointData.length >= 2) {");
+      client.println("    const setpointPoints = setpointData.map((val, idx) => {");
+      client.println("      const x = (idx / (maxPoints - 1)) * width;");
+      client.println("      const y = height - ((val - yMin) / (yMax - yMin)) * height;");
+      client.println("      return x + ',' + y;");
+      client.println("    }).join(' ');");
+      client.println("    const setpointLine = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');");
+      client.println("    setpointLine.setAttribute('fill', 'none');");
+      client.println("    setpointLine.setAttribute('stroke', setpointColor);");
+      client.println("    setpointLine.setAttribute('stroke-width', '2');");
+      client.println("    setpointLine.setAttribute('stroke-dasharray', '5,5');");
+      client.println("    setpointLine.setAttribute('points', setpointPoints);");
+      client.println("    svg.appendChild(setpointLine);");
+      client.println("  }");
+
       client.println("  const axis = document.createElementNS('http://www.w3.org/2000/svg', 'line');");
       client.println("  axis.setAttribute('x1', 0);");
       client.println("  axis.setAttribute('y1', height);");
@@ -136,7 +154,6 @@ void dataWebPage::update(float temp, float pressure, float tempSetPoint, float p
       client.println("  axis.setAttribute('stroke-width', '1');");
       client.println("  svg.appendChild(axis);");
 
-      client.println("  // Add yMin and yMax labels");
       client.println("  const yMinText = document.createElementNS('http://www.w3.org/2000/svg', 'text');");
       client.println("  yMinText.setAttribute('x', 5);");
       client.println("  yMinText.setAttribute('y', height - 5);");
@@ -154,39 +171,40 @@ void dataWebPage::update(float temp, float pressure, float tempSetPoint, float p
       client.println("  svg.appendChild(yMaxText);");
       client.println("}");
 
-      // update temp
       client.println("function updateData() {");
-      client.println("  fetch('/sensor/temp').then(r => r.text()).then(tempStr => {");
-      client.println("    const tempVal = parseValue(tempStr);");
-      client.println("    if (!isNaN(tempVal)) {");
+      client.println("  fetch('/data').then(r => r.json()).then(data => {");
+      client.println("    if (!isNaN(data.temp)) {");
       client.println("      if(tempData.length >= maxPoints) tempData.shift();");
-      client.println("      tempData.push(tempVal);");
-      client.println("      document.getElementById('tempValue').innerHTML = tempStr;");
-      client.println("      drawGraph('tempGraph', tempData, 15, 35, '#ff5733');"); // Adjust Y axis as needed
+      client.println("      tempData.push(data.temp);");
+      client.println("      document.getElementById('tempValue').textContent = data.temp.toFixed(1);");
       client.println("    }");
-      client.println("  });");
-      
-      // update pressure
-      client.println("  fetch('/sensor/pressure').then(r => r.text()).then(pressureStr => {");
-      client.println("    const pressureVal = parseValue(pressureStr);");
-      client.println("    if (!isNaN(pressureVal)) {");
+      client.println("    if (!isNaN(data.pressure)) {");
       client.println("      if(pressureData.length >= maxPoints) pressureData.shift();");
-      client.println("      pressureData.push(pressureVal);");
-      client.println("      document.getElementById('pressureValue').innerHTML = pressureStr;");
-      client.println("      drawGraph('pressureGraph', pressureData, 0, 100, '#3377ff');"); // Adjust Y axis as needed
+      client.println("      pressureData.push(data.pressure);");
+      client.println("      document.getElementById('pressureValue').textContent = data.pressure.toFixed(1);");
       client.println("    }");
-      client.println("  });");
+      client.println("    if (!isNaN(data.tempSet)) {");
+      client.println("      if(tempSetpointData.length >= maxPoints) tempSetpointData.shift();");
+      client.println("      tempSetpointData.push(data.tempSet);");
+      client.println("      document.getElementById('tempSetpoint').textContent = data.tempSet.toFixed(1);");
+      client.println("    }");
+      client.println("    if (!isNaN(data.pressureSet)) {");
+      client.println("      if(pressureSetpointData.length >= maxPoints) pressureSetpointData.shift();");
+      client.println("      pressureSetpointData.push(data.pressureSet);");
+      client.println("      document.getElementById('pressureSetpoint').textContent = data.pressureSet.toFixed(1);");
+      client.println("    }");
+      client.println("    drawGraph('tempGraph', tempData, tempSetpointData, 0, 160, '#ff5733', '#ff5733');");
+      client.println("    drawGraph('pressureGraph', pressureData, pressureSetpointData, 0, 140, '#3377ff', '#3377ff');");
+      client.println("  }).catch(err => console.error('Fetch error:', err));");
       client.println("}");
 
       client.println("setInterval(updateData, 500);");
-      client.println("updateData();");  // initial call
+      client.println("updateData();");
 
       client.println("</script>");
-
       client.println("</div>");
       client.println("</body></html>");
 
-      // The HTTP response ends with another blank line
       client.println();
     }
     // Close the connection
@@ -195,6 +213,3 @@ void dataWebPage::update(float temp, float pressure, float tempSetPoint, float p
     Serial.println("");
   }
 }
-
-
-
