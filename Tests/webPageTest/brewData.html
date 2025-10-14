@@ -5,7 +5,7 @@
   <style>
     body { 
       font-family: Monaco, monospace; 
-      background-color: #fdf5e6; 
+      background-color: #fff; 
       color: #111; 
       text-align: center; 
       padding: 10px; 
@@ -55,8 +55,11 @@
       background-color: #fff; 
       border-radius: 10px; 
     }
-    .setpoint { 
-      color: #2196F3; 
+    .pressSetpoint { 
+      color: #2196F3;
+    }
+    .tempSetpoint {
+      color: #D30000;
     }
     .legend {
       text-align: center;
@@ -79,12 +82,12 @@
       <tr>
         <td>Temperature</td>
         <td><span id="tempValue">0.0</span> &#8451;</td>
-        <td class="setpoint"><span id="tempSetpoint">0.0</span> &#8451;</td>
+        <td class="setpoint tempSetpoint"><span id="tempSetpoint">0.0</span> &#8451;</td>
       </tr>
       <tr>
         <td>Pressure</td>
         <td><span id="pressureValue">0.0</span> psi</td>
-        <td class="setpoint"><span id="pressureSetpoint">0.0</span> psi</td>
+        <td class="setpoint pressSetpoint"><span id="pressureSetpoint">0.0</span> psi</td>
       </tr>
     </table>
 
