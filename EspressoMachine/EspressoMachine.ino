@@ -58,8 +58,8 @@ void setup() {
 
   menu.beginInput(PIN_KNOB_ROTATE_A, PIN_KNOB_ROTATE_B, PIN_KNOB_BUTTON);
 
-  pinMode(PIN_SWITCH_BREW, INPUT_PULLDOWN);
-  pinMode(PIN_SWITCH_STEAM, INPUT_PULLDOWN);
+  pinMode(PIN_SWITCH_BREW, INPUT_PULLUP);
+  pinMode(PIN_SWITCH_STEAM, INPUT_PULLUP);
 
   pinMode(PIN_SOLENOID, OUTPUT);
   digitalWrite(PIN_SOLENOID, LOW);
@@ -91,8 +91,8 @@ void uiLoop(void * pvParameters) {
 
 
     // state switch
-    bool brewSwitch = digitalRead(PIN_SWITCH_BREW);
-    bool steamSwitch = digitalRead(PIN_SWITCH_STEAM);
+    bool brewSwitch = !digitalRead(PIN_SWITCH_BREW); // active low
+    bool steamSwitch = !digitalRead(PIN_SWITCH_STEAM);
     if (!brewSwitch && !steamSwitch) {
       machineState = IDLE_STATE;
       if (machineState != IDLE_STATE) {
@@ -145,7 +145,7 @@ void mainLoop(void * pvParameters) {
       digitalWrite(PIN_SOLENOID, LOW);
       break;
     case HOT_WATER_STATE:
-      pc.setAlwaysOff();
+      pc.setAlwaysOn();
       digitalWrite(PIN_SOLENOID, LOW);
     }
 
