@@ -109,6 +109,8 @@ void Menu::show() {
         showSidebarInfo();
     } else if (currentState == BREW_PAGE){
         showBrewPage();
+    } else if (currentState == STEAM_PAGE){
+        showSteamPage();
     }
 
     display.display();
@@ -235,6 +237,11 @@ void Menu::select() {
         }
     }
     else if (currentState == MODE_PAGE) {
+        if (listSelection == 0) {          // Steam
+        currentState = STEAM_PAGE;     // ← 切到 Steam 页面
+        // lastFrameTime = 0;
+        // currentFrame  = 0;
+        }
         if (listSelection == 1) {  // Brew
         currentState = BREW_PAGE;    // ← 切换状态
         brewStartTime = millis();
@@ -292,7 +299,7 @@ void Menu::showSettingPage() {
             display.setTextColor(SH110X_WHITE);
         }
 
-        if (i == 0) {  //Temperature 
+        if (i == 0) {  // Temperature 
             display.print("Temp: ");
             display.print(temperature);
             display.println("C");
@@ -300,11 +307,20 @@ void Menu::showSettingPage() {
             display.print("Press: ");
             display.print(targetPressurePsi, 0);
             display.println(" P");
-        } else if (i == 2) {  // Back
+        } else if (i == 2) {  // PreinfPress
+            display.print("PreP: ");
+            display.print(preinfPressurePsi, 1);
+            display.println(" p");
+        } else if (i == 3) {  // PreinfTime
+            display.print("PreT: ");
+            display.print(preinfTimeSec);
+            display.println(" s");
+        } else if (i == 4) {  // Back
             display.println("Back");
         }
     }
 }
+
 void Menu::showSidebarInfo() {
     display.setTextColor(SH110X_WHITE); 
     display.drawLine(70, 0, 70, SCREEN_HEIGHT, SH110X_WHITE);
@@ -364,4 +380,34 @@ void Menu::showBrewPage() {
     display.print(currentTemperature);
     display.println("C");
 }
+
+void Menu::showSteamPage() {
+    // 若暂时没有 steam 位图，可以先复用 brew 的两帧，或只画文字
+    unsigned long now = millis();
+    if (now - lastFrameTime >= frameInterval) {
+        currentFrame = (currentFrame + 1) % 2;
+        lastFrameTime = now;
+    }
+
+    // 如果你已经做好 steam 的 58x64 位图，替换下面两行名字：
+    const unsigned char* frame = (currentFrame == 0) ? steam_1 : steam_2;
+    display.drawBitmap(0, 0, frame, 58, 64, SH110X_WHITE);
+
+    // 右侧状态栏样式，和 Brew 类似但不倒计时
+    display.setCursor(70, 0);
+    display.setTextSize(1);
+    display.setTextColor(SH110X_WHITE);
+    display.println("STEAM");
+
+    display.setCursor(70, 15);
+    display.print("Tar: ");
+    display.print(temperature);
+    display.println("C");
+
+    display.setCursor(70, 30);
+    display.print("Cur: ");
+    display.print(currentTemperature);
+    display.println("C");
+}
+
 
