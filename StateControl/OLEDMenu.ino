@@ -114,7 +114,7 @@ void uiLoop(void * pvParameters) {
           menu.resetBrewAnimation(); 
           break;
         case STEAM_STATE:
-          menu.setState(MODE_PAGE); //todo
+          menu.setState(STEAM_PAGE); //todo
           break;
         case HOT_WATER_STATE:
           menu.setState(MODE_PAGE); //todo 
