@@ -20,7 +20,8 @@ enum MenuState {
     MAIN_MENU,
     MODE_PAGE,
     SETTING_PAGE,
-    BREW_PAGE
+    BREW_PAGE,//brew page
+    STEAM_PAGE//steam page
 };
 
 class Menu {
@@ -78,6 +79,7 @@ public:
     void showBrewPagePublic();    // brew page start pressure control
     void startBrewAnimation();    // start animation 
     void stopBrewAnimation(); 
+    void showSteamPage();
     //state control
     void setState(MenuState s);     // 仅切换页面状态，不直接绘制
     void resetBrewAnimation();   
