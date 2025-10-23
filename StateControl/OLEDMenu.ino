@@ -25,9 +25,11 @@ static volatile float currentTemperature = 0;
 static volatile float currentPressure = 0;
 
 static volatile float preinfusePressure = 20;
-static volatile unsigned long preinfuseTime = 10;
+static volatile unsigned long preinfuseTime = 5;
 
-
+enum BrewPhase { BREW_PREINFUSE, BREW_HOLD };
+static BrewPhase brewPhase = BREW_PREINFUSE;
+static unsigned long brewPhaseStartMs = 0;
 
 enum MachineState {
   IDLE_STATE,
@@ -37,6 +39,8 @@ enum MachineState {
 };
 
 static volatile MachineState machineState = IDLE_STATE;
+
+static MachineState lastState = IDLE_STATE;
 
 
 void setup() {
@@ -69,69 +73,163 @@ void setup() {
 
 }
 
-
 void uiLoop(void * pvParameters) {
-  for(;;) {
+   for(;;) {
     menu.pollInput();
+    
     menu.show();
 
     int step = menu.consumeStep();
     if (step != 0) menu.moveSelection(step > 0);
     if (menu.consumeClick()) menu.select();
+    
 
     targetTemperature = menu.getTargetTemperature() + TEMPERATURE_OFFSET;
-    targetPressure    = menu.getTargetPressure();
-    preinfusePressure = menu.getPreinfPressure(); 
-    preinfuseTime     = menu.getPreinfTimeSec();  
+    targetPressure = menu.getTargetPressure();
+    // preinfusePressure = menu.getPreinfusePressure();
+    // preinfuseTime = menu.getPreinfuseTime();
 
     menu.setCurrentTemperature(currentTemperature - TEMPERATURE_OFFSET);
     menu.setCurrentPressure(currentPressure);
 
-    // -------- 状态切换 + UI 同步 --------
-    bool brewSwitch  = !digitalRead(PIN_SWITCH_BREW);   // active low
+
+    // state switch
+    bool brewSwitch = !digitalRead(PIN_SWITCH_BREW); // active low
     bool steamSwitch = !digitalRead(PIN_SWITCH_STEAM);
-
-    MachineState prev = machineState;   // 先记住切换前的状态
-
     if (!brewSwitch && !steamSwitch) {
       machineState = IDLE_STATE;
-    } else if (brewSwitch && !steamSwitch) {
-      machineState = BREW_STATE;
-    } else if (steamSwitch && !brewSwitch) {
-      machineState = STEAM_STATE;
-    } else if (brewSwitch && steamSwitch) {
-      machineState = HOT_WATER_STATE;
-    }
-
-    // 仅在状态变化时做 UI 页面切换
-    if (machineState != prev) {
-      switch (machineState) {
-        case IDLE_STATE:
-          menu.setState(MAIN_MENU);
-          break;
-        case BREW_STATE:
-          menu.setState(BREW_PAGE);
-          menu.resetBrewAnimation(); 
-          break;
-        case STEAM_STATE:
-          menu.setState(MODE_PAGE); //todo
-          break;
-        case HOT_WATER_STATE:
-          menu.setState(MODE_PAGE); //todo 
-          break;
+      if (machineState != IDLE_STATE) {
+        //menu.stopAll(); // or go to home screen or something
       }
     }
+    else if (brewSwitch && !steamSwitch) {
+      if (machineState != BREW_STATE) {
+        //menu.startBrew();
+        //TODO preinfuse and pressure profile
+      }
+      machineState = BREW_STATE;
+    }
+    else if (steamSwitch && !brewSwitch) {
+      machineState = STEAM_STATE;
+      if (machineState != STEAM_STATE) {
+        //menu.startSteam();
+      }
+    }
+    else if (brewSwitch && steamSwitch) {
+      machineState = HOT_WATER_STATE;
+      if (machineState != HOT_WATER_STATE) {
+        //menu.startHotWater();
+      }
+    }
+    else {
+      // https://www.youtube.com/watch?v=5IsSpAOD6K8
+    }
+
 
     yield();
   }
 }
+
+// void uiLoop(void * pvParameters) {
+//   // --- debounce state (no helpers, minimal) ---
+//   static bool     lastBrewRaw  = false,  brewStable  = false;  // raw last & debounced stable
+//   static bool     lastSteamRaw = false,  steamStable = false;
+//   static uint32_t brewEdgeMs   = 0,      steamEdgeMs = 0;
+//   const  uint16_t DEBOUNCE_MS  = 30;
+
+//   for(;;) {
+//     // ===================== UI input & rendering =====================
+//     menu.pollInput();
+//     menu.show();
+
+//     int step = menu.consumeStep();
+//     if (step != 0) menu.moveSelection(step > 0);
+//     bool clicked = menu.consumeClick();
+//     Serial.print(clicked);
+//     if (clicked) {
+//       Serial.print(clicked);
+//       if (machineState == BREW_STATE || machineState == STEAM_STATE) {
+//         machineState = IDLE_STATE;
+//         menu.setState(MAIN_MENU);   // back to home
+//       } else {
+//         menu.select();              // normal UI selection on other pages
+//       }
+//     }
+
+//     // Targets from UI
+//     targetTemperature = menu.getTargetTemperature() + TEMPERATURE_OFFSET;
+//     targetPressure    = menu.getTargetPressure();
+//     preinfusePressure = menu.getPreinfPressure(); 
+//     preinfuseTime     = menu.getPreinfTimeSec();  
+
+//     // Live values back to UI
+//     menu.setCurrentTemperature(currentTemperature - TEMPERATURE_OFFSET);
+//     menu.setCurrentPressure(currentPressure);
+
+//     // ===================== Switch handling (level-based, both edges) =====================
+//     // Active-low hardware switches: LOW = "ON / pressed", HIGH = "OFF / released".
+//     bool rawBrew  = !digitalRead(PIN_SWITCH_BREW);
+//     bool rawSteam = !digitalRead(PIN_SWITCH_STEAM);
+//     uint32_t now  = millis();
+
+//     // --- Brew: debounce to get a stable logical state (brewStable) ---
+//     if (rawBrew != lastBrewRaw) { lastBrewRaw = rawBrew; brewEdgeMs = now; }
+//     if ((now - brewEdgeMs) >= DEBOUNCE_MS && rawBrew != brewStable) {
+//       brewStable = rawBrew;  // stable state changed
+
+//       if (brewStable) {
+//         // Brew switch turned ON  → enter BREW (and leave other modes)
+//         if (machineState != BREW_STATE) {
+//           machineState = BREW_STATE;
+//           menu.setState(BREW_PAGE);      // reset brew timer inside setState
+//           menu.resetBrewAnimation();
+//         }
+//       } else {
+//         // Brew switch turned OFF → if we are in BREW, exit to MAIN
+//         if (machineState == BREW_STATE) {
+//           machineState = IDLE_STATE;
+//           menu.setState(MAIN_MENU);
+//         }
+//       }
+//     }
+
+//     // --- Steam: debounce to get a stable logical state (steamStable) ---
+//     if (rawSteam != lastSteamRaw) { lastSteamRaw = rawSteam; steamEdgeMs = now; }
+//     if ((now - steamEdgeMs) >= DEBOUNCE_MS && rawSteam != steamStable) {
+//       steamStable = rawSteam;  // stable state changed
+
+//       if (steamStable) {
+//         // Steam switch turned ON → enter STEAM (and leave other modes)
+//         if (machineState != STEAM_STATE) {
+//           machineState = STEAM_STATE;
+//           menu.setState(STEAM_PAGE);     // reset steam timer inside setState
+//         }
+//       } else {
+//         // Steam switch turned OFF → if we are in STEAM, exit to MAIN
+//         if (machineState == STEAM_STATE) {
+//           machineState = IDLE_STATE;
+//           menu.setState(MAIN_MENU);
+//         }
+//       }
+//     }
+
+//     // (Mutual exclusion tip)
+//     // If you want Brew & Steam to be strictly exclusive (when both are ON),
+//     // you can add priority rules here. For most toggle-switch panels, users
+//     // won’t put both ON at once, so this can be omitted.
+
+//     yield();
+//   }
+// }
+
+
 
 
 
 void mainLoop(void * pvParameters) {
   for(;;) {
 
-    switch (machineState) {
+     switch (machineState) {
     case IDLE_STATE:
       pc.setAlwaysOff();
       digitalWrite(PIN_SOLENOID, LOW);
@@ -148,6 +246,54 @@ void mainLoop(void * pvParameters) {
       pc.setAlwaysOn();
       digitalWrite(PIN_SOLENOID, LOW);
     }
+
+// if (machineState != lastState) {
+//       if (machineState == BREW_STATE) {
+//         // 进入 Brew：从预浸阶段开始
+//         brewPhase = BREW_PREINFUSE;
+//         brewPhaseStartMs = millis();
+
+//         pc.setSetpoint(preinfusePressure);   // 来自 UI 的 preinfusePressure
+//         digitalWrite(PIN_SOLENOID, HIGH);
+//       }
+//       if (lastState == BREW_STATE && machineState != BREW_STATE) {
+
+//         pc.setSetpoint(0);
+//         digitalWrite(PIN_SOLENOID, LOW);
+//       }
+//       lastState = machineState;
+//     }
+
+//     switch (machineState) {
+//       case IDLE_STATE:
+//         pc.setAlwaysOff();
+//         digitalWrite(PIN_SOLENOID, LOW);
+//         break;
+
+//       case BREW_STATE: {
+//         digitalWrite(PIN_SOLENOID, HIGH);
+//         // prefinfuse 
+//         if (brewPhase == BREW_PREINFUSE) {
+//           unsigned long elapsed = millis() - brewPhaseStartMs;
+//           if (elapsed >= (unsigned long)preinfuseTime * 1000UL) {
+//             brewPhase = BREW_HOLD;
+//             brewPhaseStartMs = millis();
+//             pc.setSetpoint(targetPressure);
+//           }
+//         }
+//         break;
+//       }
+
+//       case STEAM_STATE:
+//         pc.setSetpoint(targetPressure);
+//         digitalWrite(PIN_SOLENOID, LOW);
+//         break;
+
+//       case HOT_WATER_STATE:
+//         pc.setAlwaysOn();
+//         digitalWrite(PIN_SOLENOID, LOW);
+//         break;
+//     }
 
     tempControl::setSetpoint(targetTemperature); // screen returns a different temperature for each mode
     currentTemperature = tempControl::getTemperature();

@@ -20,7 +20,8 @@ enum MenuState {
     MAIN_MENU,
     MODE_PAGE,
     SETTING_PAGE,
-    BREW_PAGE
+    BREW_PAGE,//brew page
+    STEAM_PAGE//steam page
 };
 
 class Menu {
@@ -47,6 +48,8 @@ private:
     //count for brew screen
     unsigned long brewStartTime = 0;
     unsigned long lastFrameTime = 0;
+    // count for steam screen
+    unsigned long steamStartTime = 0;
     int currentFrame = 0;
     const unsigned long frameInterval = 500;
 
@@ -78,6 +81,9 @@ public:
     void showBrewPagePublic();    // brew page start pressure control
     void startBrewAnimation();    // start animation 
     void stopBrewAnimation(); 
+    void showSteamPage();
+    //Steam page
+    void startSteamTimer() { steamStartTime = millis(); }
     //state control
     void setState(MenuState s);     // 仅切换页面状态，不直接绘制
     void resetBrewAnimation();   
@@ -107,7 +113,7 @@ private:
     bool     _btnLatched    = false;
     uint32_t _btnEdgeTimeMs = 0;
     uint32_t _pressCount    = 0;
-    static constexpr uint16_t DEBOUNCE_MS = 30;
+    static constexpr uint16_t DEBOUNCE_MS = 15;
     bool _clicked=false;
 };
 

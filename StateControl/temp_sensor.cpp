@@ -1,9 +1,10 @@
 #include "temp_sensor.h"
+#include "pins.h"
 
 // Pin assignments
-const int Temp_Clk = 5;
-const int Temp_Cs = 23;
-const int Temp_So = 19;
+const int Temp_Clk = PIN_TEMP_SENS_SCK;
+const int Temp_Cs = PIN_TEMP_SENS_CS ;
+const int Temp_So = PIN_TEMP_SENS_SO;
 
 TemperatureSensor::TemperatureSensor()
 
