@@ -54,7 +54,7 @@ void Menu::pollInput() {
     }
 
     // 原始状态稳定超过去抖时间，才更新“稳定状态”
-    if ((now - _btnEdgeTimeMs) >= DEBOUNCE_MS) {
+    if ((now - _btnEdgeTimeMs) >= DEBOUNCE_MS ) {
         if (rawPressed != _btnStable) {
             _btnStable = rawPressed;
 
@@ -90,6 +90,15 @@ bool Menu::consumeClick() {
 //press the button to change state
 void Menu::setState(MenuState s) {
     currentState = s;
+    if (s == STEAM_PAGE) {
+        steamStartTime = millis();
+        lastFrameTime = 0;
+        currentFrame = 0;
+    }else if (s == BREW_PAGE) {
+    brewStartTime = millis();
+    lastFrameTime = 0;
+    currentFrame  = 0;
+  }
 }
 
 void Menu::resetBrewAnimation() {
@@ -356,18 +365,14 @@ void Menu::showBrewPage() {
     display.drawBitmap(0, 0, frame, 58, 64, SH110X_WHITE);
 
     // 倒计时计算
-    int secondsLeft = 30 - (now - brewStartTime) / 1000;
-    if (secondsLeft <= 0) {
-        currentState = MAIN_MENU;
-        return;
-    }
+    uint32_t sec = (now - brewStartTime) / 1000;
 
     // 显示倒计时 & 温度
     display.setCursor(70, 0);
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
     display.print("Time: ");
-    display.print(secondsLeft);
+    display.print(sec);
     display.println("s");
 
     display.setCursor(70, 15);
@@ -375,36 +380,39 @@ void Menu::showBrewPage() {
     display.print(temperature);
     display.println("C");
 
-    display.setCursor(70, 30);
+    display.setCursor(60, 30);
     display.print("Cur: ");
     display.print(currentTemperature);
     display.println("C");
 }
 
 void Menu::showSteamPage() {
-    // 若暂时没有 steam 位图，可以先复用 brew 的两帧，或只画文字
     unsigned long now = millis();
     if (now - lastFrameTime >= frameInterval) {
         currentFrame = (currentFrame + 1) % 2;
         lastFrameTime = now;
     }
 
-    // 如果你已经做好 steam 的 58x64 位图，替换下面两行名字：
     const unsigned char* frame = (currentFrame == 0) ? steam_1 : steam_2;
     display.drawBitmap(0, 0, frame, 58, 64, SH110X_WHITE);
 
-    // 右侧状态栏样式，和 Brew 类似但不倒计时
     display.setCursor(70, 0);
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
     display.println("STEAM");
 
+    uint32_t sec = (now - steamStartTime) / 1000;
     display.setCursor(70, 15);
+    display.print("Time: ");
+    display.print(sec);
+    display.println("s");
+
+    display.setCursor(70, 30);
     display.print("Tar: ");
     display.print(temperature);
     display.println("C");
 
-    display.setCursor(70, 30);
+    display.setCursor(60, 45);
     display.print("Cur: ");
     display.print(currentTemperature);
     display.println("C");
