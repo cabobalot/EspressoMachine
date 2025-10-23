@@ -5,13 +5,13 @@
 #include "pins.h"
 #include "pressure_control.h" 
 #include "tempControl.h" 
+#include "dataWebPage.h"
 
 
 #define TEMPERATURE_OFFSET 7 // stock calibration offset
 
 TemperatureSensor tempSensor;
-PressureControl pc(5, 0.0, 0.1); //TODO try setting the pid loop delay to 16 or 17ms
-// also test in steam mode
+PressureControl pc(5, 0.0, 0.1);
 
 TaskHandle_t mainTask;
 TaskHandle_t uiTask;
@@ -64,6 +64,8 @@ void setup() {
   pinMode(PIN_SOLENOID, OUTPUT);
   digitalWrite(PIN_SOLENOID, LOW);
 
+  dataWebPage::init();
+
   xTaskCreate(uiLoop, "uiLoop", 10000, NULL, 0, &uiTask);
   xTaskCreate(mainLoop, "mainLoop", 10000, NULL, 0, &uiTask);
 
@@ -71,10 +73,19 @@ void setup() {
 
 
 void uiLoop(void * pvParameters) {
+  static unsigned long TIME_START = 0;
+  static unsigned long TIME_END = 0;
    for(;;) {
+
+    TIME_END = millis();
+    
     menu.pollInput();
+
+    
     
     menu.show();
+
+    
 
     int step = menu.consumeStep();
     if (step != 0) menu.moveSelection(step > 0);
@@ -89,7 +100,17 @@ void uiLoop(void * pvParameters) {
     menu.setCurrentTemperature(currentTemperature - TEMPERATURE_OFFSET);
     menu.setCurrentPressure(currentPressure);
 
+    // static unsigned long lastScreenUpdate = 0;
+    // if (millis() - lastScreenUpdate >= 100) {
+    //   lastScreenUpdate = millis();
+    //   dataWebPage::update(currentTemperature - TEMPERATURE_OFFSET, currentPressure, targetTemperature, targetPressure);
+    // }
 
+    
+
+    dataWebPage::update(currentTemperature - TEMPERATURE_OFFSET, currentPressure, targetTemperature, targetPressure);
+
+    
     // state switch
     bool brewSwitch = !digitalRead(PIN_SWITCH_BREW); // active low
     bool steamSwitch = !digitalRead(PIN_SWITCH_STEAM);
@@ -123,28 +144,61 @@ void uiLoop(void * pvParameters) {
     }
 
 
+    
+
+    TIME_START = millis();
+
     yield();
+
+    
+    
+    
+    static unsigned long TIME_LAST_PRINT = 0;
+    if (millis() - TIME_LAST_PRINT >= 1000) {
+      TIME_LAST_PRINT = millis();
+      Serial.print("last time:");
+      Serial.println(TIME_END - TIME_START);
+    }
+
   }
 }
 
 
 void mainLoop(void * pvParameters) {
+
+  static unsigned long brewStart = 0;
+  static bool brewing = false;
   for(;;) {
 
     switch (machineState) {
     case IDLE_STATE:
+      brewing = false;
       pc.setAlwaysOff();
       digitalWrite(PIN_SOLENOID, LOW);
       break;
     case BREW_STATE:
+      if (!brewing) {
+        brewStart = millis();
+        brewing = true;
+      }
+
+      // // handle preinfuse
+      // if (millis() - brewStart < (10 * 1000)) {
+      //   pc.setSetpoint(10.0);
+      // } else {  
+      //   pc.setSetpoint(targetPressure);
+      // }
+
       pc.setSetpoint(targetPressure);
       digitalWrite(PIN_SOLENOID, HIGH);
       break;
     case STEAM_STATE:
+      brewing = false;
       pc.setSetpoint(targetPressure);
       digitalWrite(PIN_SOLENOID, LOW);
       break;
     case HOT_WATER_STATE:
+      brewing = false;
       pc.setAlwaysOn();
       digitalWrite(PIN_SOLENOID, LOW);
     }

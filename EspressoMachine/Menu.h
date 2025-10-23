@@ -34,7 +34,7 @@ private:
     const char* modeMenuItems[MAX_MODE_ITEMS] = {"Steam", "Brew", "Back"};
     const char* settingMenuItems[MAX_SETTING_ITEMS] = {"Temperature","Pressure","Back"}; 
     //setter for pressure and temp
-    uint8_t temperature = 70;
+    uint8_t temperature = 100;
     float currentTemperature = 0; 
     float currentPressurePsi = 0.0;
     float targetPressurePsi = 90.0f;

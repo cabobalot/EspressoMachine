@@ -4,7 +4,7 @@
 Menu menu;
 Menu* Menu::_self = nullptr;
 
-Menu::Menu() : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET, 800000UL, 800000UL) {}
+Menu::Menu() : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET, 8000000UL, 8000000UL) {}
 
 bool Menu::begin() {
     if (!display.begin(0x3C, true)) {
