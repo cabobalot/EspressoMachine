@@ -19,6 +19,13 @@ void PressureControl::init(uint8_t controlPin, uint8_t zeroCrossPin) {
   psm::setValue(0);
 }
 
+
+// setting mode to manual and automatic should prevent integral windup
+void PressureControl::setSetpoint(double psi) {
+  pid_.SetMode(AUTOMATIC);
+  setpointPsi_ = psi;
+}
+
 void PressureControl::setAlwaysOn() {
   pid_.SetMode(MANUAL);
   outputPct_ = 100;
@@ -28,32 +35,26 @@ void PressureControl::setAlwaysOff() {
   pid_.SetMode(MANUAL);
   outputPct_ = 0;
 }
-void PressureControl::setSetpoint(double psi) {
-  setpointPsi_ = psi;
-}
 
-void PressureControl::setCurrentPressure(double psi) {
-  currentPsi_ = psi;
-}
-double PressureControl::setPressure(double setPsi) {
-  setSetpoint(setPsi);
-  pid_.Compute();   // 计算 0..100%
 
-  // 把百分比送给 dimmer（PSM）
-  const uint16_t v = pctToPsm(outputPct_);
-  psm::setValue(v);
-
-  return outputPct_;
-}
+// void PressureControl::setCurrentPressure(double psi) {
+//   currentPsi_ = psi;
+// }
 
 void PressureControl::update() {
-  const unsigned long now = millis();
+  currentPsi_ = calculatePressure();
+  
 
+  const unsigned long now = millis();
   if (now - prevMs_ >= kCtrlMs) {
     prevMs_ = now;
+    // Serial.println(currentPsi_);
 
     // 执行一次 PID -> PSM
-    setPressure(setpointPsi_);
+    pid_.Compute();   // 计算 0..100%
+    // 把百分比送给 dimmer（PSM）
+    const uint16_t v = pctToPsm(outputPct_);
+    psm::setValue(setpointPsi_ ? v : 0); // zero setpoint -> zero output
   }
 
   // PSM 需要每圈都 update 来跟过零节拍

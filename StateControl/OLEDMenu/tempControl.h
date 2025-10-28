@@ -1,6 +1,8 @@
 #ifndef TEMPCONTROL_H
 #define TEMPCONTROL_H
 
+#include "temp_sensor.h"
+
 class tempControl {
 private:
 
