@@ -5,6 +5,7 @@
 #include "pins.h"
 #include "pressure_control.h" 
 #include "tempControl.h" 
+#include "dataWebPage.h"
 
 
 #define TEMPERATURE_OFFSET 7 // stock calibration offset
@@ -64,6 +65,8 @@ void setup() {
   pinMode(PIN_SOLENOID, OUTPUT);
   digitalWrite(PIN_SOLENOID, LOW);
 
+  dataWebPage::init();
+
   xTaskCreate(uiLoop, "uiLoop", 10000, NULL, 0, &uiTask);
   xTaskCreate(mainLoop, "mainLoop", 10000, NULL, 0, &uiTask);
 
@@ -89,6 +92,7 @@ void uiLoop(void * pvParameters) {
     menu.setCurrentTemperature(currentTemperature - TEMPERATURE_OFFSET);
     menu.setCurrentPressure(currentPressure);
 
+    dataWebPage::update(currentTemperature - TEMPERATURE_OFFSET, currentPressure, targetTemperature, targetPressure);
 
     // state switch
     bool brewSwitch = !digitalRead(PIN_SWITCH_BREW); // active low

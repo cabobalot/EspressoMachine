@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { 
+      font-family: Monaco, monospace; 
+      background-color: #fff; 
+      color: #111; 
+      text-align: center; 
+      padding: 10px; 
+    }
+    table { 
+      margin: 0 auto; 
+      border-collapse: collapse; 
+      width: 90%; 
+      background-color: #fff; 
+      border-radius: 10px; 
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+    }
+    th, td { 
+      padding: 15px 20px; 
+      border: 1px solid #ddd; 
+      text-align: center; 
+      font-size: 1.2em; 
+    }
+    th { 
+      background-color: #987654; 
+      color: white; 
+    }
+    th:first-child { 
+      border-top-left-radius: 10px; 
+    }
+    th:last-child { 
+      border-top-right-radius: 10px; 
+    }
+    td { 
+      background-color: #f9f9f9; 
+      font-weight: bold; 
+      color: #333; 
+    }
+    h1 { 
+      color: #654321; 
+      font-size: 2em; 
+      margin-bottom: 20px; 
+    }
+    h2 {
+      color: #654321;
+      margin-top: 30px;
+    }
+    .container { 
+      max-width: 1000px; 
+      margin: 0 auto; 
+      padding: 20px; 
+      background-color: #fff; 
+      border-radius: 10px; 
+    }
+    .pressSetpoint { 
+      color: #2196F3;
+    }
+    .tempSetpoint {
+      color: #D30000;
+    }
+    .legend {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .legend span {
+      margin-right: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Sensor Data</h1>
+    <table>
+      <tr>
+        <th>Sensor</th>
+        <th>Current Value</th>
+        <th>Setpoint</th>
+      </tr>
+      <tr>
+        <td>Temperature</td>
+        <td><span id="tempValue">0.0</span> &#8451;</td>
+        <td class="setpoint tempSetpoint"><span id="tempSetpoint">0.0</span> &#8451;</td>
+      </tr>
+      <tr>
+        <td>Pressure</td>
+        <td><span id="pressureValue">0.0</span> psi</td>
+        <td class="setpoint pressSetpoint"><span id="pressureSetpoint">0.0</span> psi</td>
+      </tr>
+    </table>
+
+    <h2>Temperature Graph</h2>
+    <div class="legend">
+      <span>
+        <svg width="30" height="3" style="vertical-align:middle;">
+          <line x1="0" y1="1.5" x2="30" y2="1.5" stroke="#ff5733" stroke-width="3"/>
+        </svg> 
+        <span style="vertical-align:middle;">Current</span>
+      </span>
+      <span>
+        <svg width="30" height="3" style="vertical-align:middle;">
+          <line x1="0" y1="1.5" x2="30" y2="1.5" stroke="#ff5733" stroke-width="2" stroke-dasharray="5,5"/>
+        </svg> 
+        <span style="vertical-align:middle;">Setpoint</span>
+      </span>
+    </div>
+    <svg id="tempGraph" width="600" height="350" style="background:#f0f0f0; border:4px solid #987654;"></svg>
+
+    <h2>Pressure Graph</h2>
+    <div class="legend">
+      <span>
+        <svg width="30" height="3" style="vertical-align:middle;">
+          <line x1="0" y1="1.5" x2="30" y2="1.5" stroke="#3377ff" stroke-width="3"/>
+        </svg> 
+        <span style="vertical-align:middle;">Current</span>
+      </span>
+      <span>
+        <svg width="30" height="3" style="vertical-align:middle;">
+          <line x1="0" y1="1.5" x2="30" y2="1.5" stroke="#3377ff" stroke-width="2" stroke-dasharray="5,5"/>
+        </svg> 
+        <span style="vertical-align:middle;">Setpoint</span>
+      </span>
+    </div>
+    <svg id="pressureGraph" width="600" height="350" style="background:#f0f0f0; border:4px solid #987654;"></svg>
+  </div>
+
+  <script>
+    const maxPoints = 20;
+    const tempData = [];
+    const pressureData = [];
+    const tempSetpointData = [];
+    const pressureSetpointData = [];
+
+    function drawGraph(svgId, data, setpointData, yMin, yMax, strokeColor, setpointColor) {
+      const svg = document.getElementById(svgId);
+      const width = svg.clientWidth;
+      const height = svg.clientHeight;
+      svg.innerHTML = '';
+      if(data.length < 2) return;
+
+      const points = data.map((val, idx) => {
+        const x = (idx / (maxPoints - 1)) * width;
+        const y = height - ((val - yMin) / (yMax - yMin)) * height;
+        return x + ',' + y;
+      }).join(' ');
+
+      const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      polyline.setAttribute('fill', 'none');
+      polyline.setAttribute('stroke', strokeColor);
+      polyline.setAttribute('stroke-width', '3');
+      polyline.setAttribute('points', points);
+      svg.appendChild(polyline);
+
+      if (setpointData.length >= 2) {
+        const setpointPoints = setpointData.map((val, idx) => {
+          const x = (idx / (maxPoints - 1)) * width;
+          const y = height - ((val - yMin) / (yMax - yMin)) * height;
+          return x + ',' + y;
+        }).join(' ');
+        const setpointLine = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+        setpointLine.setAttribute('fill', 'none');
+        setpointLine.setAttribute('stroke', setpointColor);
+        setpointLine.setAttribute('stroke-width', '2');
+        setpointLine.setAttribute('stroke-dasharray', '5,5');
+        setpointLine.setAttribute('points', setpointPoints);
+        svg.appendChild(setpointLine);
+      }
+
+      const axis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      axis.setAttribute('x1', 0);
+      axis.setAttribute('y1', height);
+      axis.setAttribute('x2', width);
+      axis.setAttribute('y2', height);
+      axis.setAttribute('stroke', '#333');
+      axis.setAttribute('stroke-width', '1');
+      svg.appendChild(axis);
+
+      const yMinText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      yMinText.setAttribute('x', 5);
+      yMinText.setAttribute('y', height - 5);
+      yMinText.setAttribute('font-size', '12');
+      yMinText.setAttribute('fill', '#333');
+      yMinText.textContent = yMin.toFixed(1);
+      svg.appendChild(yMinText);
+    
+      const yMaxText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      yMaxText.setAttribute('x', 5);
+      yMaxText.setAttribute('y', 15);
+      yMaxText.setAttribute('font-size', '12');
+      yMaxText.setAttribute('fill', '#333');
+      yMaxText.textContent = yMax.toFixed(1);
+      svg.appendChild(yMaxText);
+    }
+
+    function updateData() {
+      fetch('/data').then(r => r.json()).then(data => {
+        if (!isNaN(data.temp)) {
+          if(tempData.length >= maxPoints) tempData.shift();
+          tempData.push(data.temp);
+          document.getElementById('tempValue').textContent = data.temp.toFixed(1);
+        }
+        if (!isNaN(data.pressure)) {
+          if(pressureData.length >= maxPoints) pressureData.shift();
+          pressureData.push(data.pressure);
+          document.getElementById('pressureValue').textContent = data.pressure.toFixed(1);
+        }
+        if (!isNaN(data.tempSet)) {
+          if(tempSetpointData.length >= maxPoints) tempSetpointData.shift();
+          tempSetpointData.push(data.tempSet);
+          document.getElementById('tempSetpoint').textContent = data.tempSet.toFixed(1);
+        }
+        if (!isNaN(data.pressureSet)) {
+          if(pressureSetpointData.length >= maxPoints) pressureSetpointData.shift();
+          pressureSetpointData.push(data.pressureSet);
+          document.getElementById('pressureSetpoint').textContent = data.pressureSet.toFixed(1);
+        }
+        drawGraph('tempGraph', tempData, tempSetpointData, 0, 160, '#ff5733', '#ff5733');
+        drawGraph('pressureGraph', pressureData, pressureSetpointData, 0, 140, '#3377ff', '#3377ff');
+      }).catch(err => console.error('Fetch error:', err));
+    }
+
+    setInterval(updateData, 500);
+    updateData();
+  </script>
+</body>
+</html>
