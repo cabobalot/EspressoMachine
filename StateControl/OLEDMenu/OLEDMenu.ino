@@ -104,7 +104,7 @@ void uiLoop(void * pvParameters) {
     targetTemperature = menu.getTargetTemperature() + TEMPERATURE_OFFSET;
     targetPressure    = menu.getTargetPressure();
     preinfusePressure = menu.getPreinfPressure(); 
-    preinfuseTime     = menu.getPreinfTimeSec();  
+    preinfuseTime     = menu.getPreinfTimeSec();
 
     // Live values back to UI
     menu.setCurrentTemperature(currentTemperature - TEMPERATURE_OFFSET);
@@ -170,56 +170,135 @@ void uiLoop(void * pvParameters) {
 
 
 
+// void mainLoop(void * pvParameters) {
+//   for(;;) {
+
+//   if (machineState != lastState) {
+//         if (machineState == BREW_STATE) {
+//           // 进入 Brew：从预浸阶段开始
+//           brewPhase = BREW_PREINFUSE;
+//           brewPhaseStartMs = millis();
+
+//           pc.setSetpoint(preinfusePressure);   // 来自 UI 的 preinfusePressure
+//           digitalWrite(PIN_SOLENOID, HIGH);
+//         }
+//         if (lastState == BREW_STATE && machineState != BREW_STATE) {
+
+//           pc.setSetpoint(0);
+//           digitalWrite(PIN_SOLENOID, LOW);
+//         }
+//         lastState = machineState;
+//       }
+
+//       switch (machineState) {
+//         case IDLE_STATE:
+//           pc.setAlwaysOff();
+//           digitalWrite(PIN_SOLENOID, LOW);
+//           break;
+
+//         case BREW_STATE: {
+//           digitalWrite(PIN_SOLENOID, HIGH);
+//           // prefinfuse 
+//           if (brewPhase == BREW_PREINFUSE) {
+//             unsigned long elapsed = millis() - brewPhaseStartMs;
+//             if (elapsed >= (unsigned long)preinfuseTime * 1000UL) {
+//               brewPhase = BREW_HOLD;
+//               brewPhaseStartMs = millis();
+//               pc.setSetpoint(targetPressure);
+//             }
+//           }
+//           break;
+//         }
+
+//         case STEAM_STATE:
+//           pc.setSetpoint(targetPressure);
+//           digitalWrite(PIN_SOLENOID, LOW);
+//           break;
+
+//         case HOT_WATER_STATE:
+//           pc.setAlwaysOn();
+//           digitalWrite(PIN_SOLENOID, LOW);
+//           break;
+//       }
+//     pc.update();
+
+//     tempControl::setSetpoint(targetTemperature); // screen returns a different temperature for each mode
+//     currentTemperature = tempControl::getTemperature();
+
+//     currentPressure = pc.getPressure();
+
+
+//     tempControl::update();
+
+    
+//     // TIME_END = millis();
+    
+//     static unsigned long TIME_LAST_PRINT = 0;
+//     if (millis() - TIME_LAST_PRINT >= 210) {
+//       TIME_LAST_PRINT = millis();
+//       // Serial.print("last time:");
+//       // Serial.println(TIME_END - TIME_START);
+
+//       // Serial.printf("temp:%.1f, tempset:%.1f, pres:%.1f, pressSet:%.1f\r\n", currentTemperature, targetTemperature, currentPressure, targetPressure);
+
+
+//       Serial.print(">temp:");
+//       Serial.print(currentTemperature, 2);
+//       Serial.print(",tempset:");
+//       Serial.print(targetTemperature, 2);
+//       Serial.print(",pres:");
+//       Serial.print(currentPressure, 2);
+//       Serial.print(",pressSet:");
+//       Serial.println(targetPressure, 2);
+
+//       // Serial.flush();
+//     }
+
+    
+
+//     // taskYIELD(); // do we need this or is yield() fine?
+//     yield();
+//   }
+// }
+
 void mainLoop(void * pvParameters) {
+
+  static unsigned long brewStart = 0;
+  static bool brewing = false;
   for(;;) {
 
-  if (machineState != lastState) {
-        if (machineState == BREW_STATE) {
-          // 进入 Brew：从预浸阶段开始
-          brewPhase = BREW_PREINFUSE;
-          brewPhaseStartMs = millis();
-
-          pc.setSetpoint(preinfusePressure);   // 来自 UI 的 preinfusePressure
-          digitalWrite(PIN_SOLENOID, HIGH);
-        }
-        if (lastState == BREW_STATE && machineState != BREW_STATE) {
-
-          pc.setSetpoint(0);
-          digitalWrite(PIN_SOLENOID, LOW);
-        }
-        lastState = machineState;
+    switch (machineState) {
+    case IDLE_STATE:
+      brewing = false;
+      pc.setAlwaysOff();
+      digitalWrite(PIN_SOLENOID, LOW);
+      break;
+    case BREW_STATE:
+      if (!brewing) {
+        brewStart = millis();
+        brewing = true;
       }
 
-      switch (machineState) {
-        case IDLE_STATE:
-          pc.setAlwaysOff();
-          digitalWrite(PIN_SOLENOID, LOW);
-          break;
+      // // handle preinfuse
+      // if (millis() - brewStart < (10 * 1000)) {
+      //   pc.setSetpoint(10.0);
+      // } else {  
+      //   pc.setSetpoint(targetPressure);
+      // }
 
-        case BREW_STATE: {
-          digitalWrite(PIN_SOLENOID, HIGH);
-          // prefinfuse 
-          if (brewPhase == BREW_PREINFUSE) {
-            unsigned long elapsed = millis() - brewPhaseStartMs;
-            if (elapsed >= (unsigned long)preinfuseTime * 1000UL) {
-              brewPhase = BREW_HOLD;
-              brewPhaseStartMs = millis();
-              pc.setSetpoint(targetPressure);
-            }
-          }
-          break;
-        }
-
-        case STEAM_STATE:
-          pc.setSetpoint(targetPressure);
-          digitalWrite(PIN_SOLENOID, LOW);
-          break;
-
-        case HOT_WATER_STATE:
-          pc.setAlwaysOn();
-          digitalWrite(PIN_SOLENOID, LOW);
-          break;
-      }
+      pc.setSetpoint(targetPressure);
+      digitalWrite(PIN_SOLENOID, HIGH);
+      break;
+    case STEAM_STATE:
+      brewing = false;
+      pc.setSetpoint(targetPressure);
+      digitalWrite(PIN_SOLENOID, LOW);
+      break;
+    case HOT_WATER_STATE:
+      brewing = false;
+      pc.setAlwaysOn();
+      digitalWrite(PIN_SOLENOID, LOW);
+    }
 
     tempControl::setSetpoint(targetTemperature); // screen returns a different temperature for each mode
     currentTemperature = tempControl::getTemperature();
@@ -260,7 +339,6 @@ void mainLoop(void * pvParameters) {
     yield();
   }
 }
-
 void loop() {
   // static unsigned long TIME_START = 0;
   // static unsigned long TIME_END = 0;
