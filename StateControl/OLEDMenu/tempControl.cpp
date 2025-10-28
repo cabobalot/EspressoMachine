@@ -12,7 +12,7 @@ static double currentTemp = 0.0;
 static double setpoint = 0.0;
 static double outputDuty= 0.0;
 
-static double Kp = 1.1, Ki = 0.01, Kd = 0.01;
+static double Kp = 7.0, Ki = 1.5, Kd = 4.0;
 
 unsigned long prevMillis = 0;
 const unsigned long interval = 1000; 
@@ -74,7 +74,7 @@ void tempControl::update() {
     if(currMillis - prevMillis >= interval) {
       prevMillis = currMillis;
 
-      currentTemp = tempControl::getTemperature(); // grab current temp
+      currentTemp = TemperatureSensor::getTemperature(); // grab current temp
       
       tempControl::setTemperature(setpoint); // reach that temperature
 

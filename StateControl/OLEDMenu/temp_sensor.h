@@ -12,11 +12,13 @@ extern const int Temp_So;
 
 class TemperatureSensor {
 public:
-  TemperatureSensor();
-  float readTemperature();
-  
+  // TemperatureSensor();
+  static void init();
+  static float getTemperature();
 private:
-  MAX6675 thermocouple;
+  static MAX6675 thermocouple;
+  static float readTemperature();
+  static float temperature;
 };
 
 #endif // TEMPERATURE_SENSOR_H
