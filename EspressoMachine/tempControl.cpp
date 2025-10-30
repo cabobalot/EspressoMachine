@@ -3,8 +3,9 @@
 #include <PID_v1.h> // PID library
 #include "driver/mcpwm.h" // ESP32 PWM library
 #include "soc/mcpwm_periph.h"
+#include "pins.h"
 
-#define OUTPUT_PIN 26
+
 #define PWM_FREQ 1
 
 // Static variables to hold current temp and target
@@ -15,7 +16,7 @@ static double outputDuty= 0.0;
 static double Kp = 7.0, Ki = 1.5, Kd = 4.0;
 
 unsigned long prevMillis = 0;
-const unsigned long interval = 1000; 
+const unsigned long interval = 1000;
 
 // PID object from library
 static PID tempPID(&currentTemp, &outputDuty, &setpoint, Kp, Ki, Kd, DIRECT);
@@ -29,7 +30,7 @@ void tempControl::init() {
   // PWM setup
   mcpwm_timer_set_resolution(MCPWM_UNIT_0, MCPWM_TIMER_1, 60000);
 
-  mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM1A, OUTPUT_PIN);
+  mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM1A, PIN_HEATER);
   mcpwm_config_t pwm_config;
   pwm_config.frequency = PWM_FREQ;
   pwm_config.cmpr_a = 0.0;

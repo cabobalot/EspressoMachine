@@ -35,11 +35,11 @@ private:
     const char* settingMenuItems[MAX_SETTING_ITEMS] = {"Temperature", "Pressure", "PreinfPress", "PreinfTime", "Back"}; 
     MenuState currentState = MAIN_MENU; 
     //setter for pressure and temp
-    uint8_t temperature = 70;
+    uint8_t temperature = 100;
     float currentTemperature = 0; 
     float currentPressurePsi = 0.0;
-    float targetPressurePsi = 40.0f;
-    float   preinfPressurePsi = 6.0f;   // default 6
+    float targetPressurePsi = 100.0f;
+    float   preinfPressurePsi = 20.0f;   // default 20
     uint16_t preinfTimeSec    = 5;      // default 5
     bool isEditingPreinfPressure = false;
     bool isEditingPreinfTime     = false;
