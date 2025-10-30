@@ -10,7 +10,7 @@
 #define TEMPERATURE_OFFSET 7 // stock calibration offset
 
 TemperatureSensor tempSensor;
-PressureControl pc(5, 0.0, 0.1); //TODO try setting the pid loop delay to 16 or 17ms
+PressureControl pc(5, 0.0, 0.1);
 // also test in steam mode
 
 TaskHandle_t mainTask;
@@ -42,7 +42,7 @@ static volatile MachineState machineState = IDLE_STATE;
 void setup() {
   Serial.begin(115200);
 
-  Wire.begin(PIN_SCREEN_SDA, PIN_SCREEN_SCL);
+  Wire.begin(PIN_SCREEN_SDA, PIN_SCREEN_SCL); // TODO put this inside the menu class, also clock needs to be 800kHz
   Wire.setClock(400000); 
   if (!menu.begin()) {
     Serial.println(F("SSD1306 allocation failed"));
@@ -56,7 +56,7 @@ void setup() {
   //temporary init
   pc.setAlwaysOff();
 
-  menu.beginInput(PIN_KNOB_ROTATE_A, PIN_KNOB_ROTATE_B, PIN_KNOB_BUTTON);
+  menu.beginInput(PIN_KNOB_ROTATE_A, PIN_KNOB_ROTATE_B, PIN_KNOB_BUTTON); // TODO put this inside the menu class
 
   pinMode(PIN_SWITCH_BREW, INPUT_PULLUP);
   pinMode(PIN_SWITCH_STEAM, INPUT_PULLUP);
