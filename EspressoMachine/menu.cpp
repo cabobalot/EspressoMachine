@@ -3,6 +3,7 @@
 
 Menu menu;
 Menu* Menu::_self = nullptr;
+const char* Menu::NVS_NAMESPACE = "espresso";  // NVS命名空间
 
 Menu::Menu() : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET) {}
 
@@ -135,6 +136,7 @@ void Menu::moveSelection(bool up) {
     if (currentState == SETTING_PAGE && isEditingTemperature) {
             if (up && temperature < 100) temperature++;
             if (!up && temperature > 30) temperature--;
+            saveSettings();  // 自动保存设置
             return;
         }
 
@@ -142,24 +144,28 @@ void Menu::moveSelection(bool up) {
     if (currentState == SETTING_PAGE && isEditingPressureBrew) {
         if (up  && targetPressurePsiBrew < 150.0f)  targetPressurePsiBrew += 1.0f;
         if (!up && targetPressurePsiBrew >   0.0f)  targetPressurePsiBrew -= 1.0f;
+        saveSettings();  // 自动保存设置
         return;
     }
     // Editing Steam Pressure
     if (currentState == SETTING_PAGE && isEditingPressureSteam) {
         if (up  && targetPressurePsiSteam < 150.0f) targetPressurePsiSteam += 1.0f;
         if (!up && targetPressurePsiSteam >  0.0f)  targetPressurePsiSteam -= 1.0f;
+        saveSettings();  // 自动保存设置
         return;
     }
     // Editing: Preinf Pressure
     if (currentState == SETTING_PAGE && isEditingPreinfPressure) {
         if (up  && preinfPressurePsi < 150.0f) preinfPressurePsi += 0.5f;
         if (!up && preinfPressurePsi >   0.0f) preinfPressurePsi -= 0.5f;
+        saveSettings();  // 自动保存设置
         return;
     }
     // Editing: Preinf Time
     if (currentState == SETTING_PAGE && isEditingPreinfTime) {
         if (up  && preinfTimeSec < 60) preinfTimeSec += 1;
         if (!up && preinfTimeSec >  0) preinfTimeSec -= 1;
+        saveSettings();  // 自动保存设置
         return;
     }
 
@@ -503,5 +509,133 @@ void Menu::showWaterPage() {
     display.println("P");
 }
 
+// ==================== 设置持久化存储 ====================
 
+void Menu::saveSettings() {
+    // 保存到默认设置（profile 0）
+    saveProfile(0);
+}
+
+void Menu::loadSettings() {
+    // 从默认设置加载（profile 0）
+    loadProfile(0);
+}
+
+void Menu::saveProfile(uint8_t profileId) {
+    if (!preferences.begin(NVS_NAMESPACE, false)) {
+        Serial.println("Failed to open preferences for saving!");
+        return;
+    }
+    
+    // 构建键名：profileId=0时使用默认键名，否则使用"profileX_xxx"
+    char key[32];
+    
+    if (profileId == 0) {
+        // 默认设置
+        preferences.putUChar("temp", temperature);
+        preferences.putFloat("brewP", targetPressurePsiBrew);
+        preferences.putFloat("steamP", targetPressurePsiSteam);
+        preferences.putFloat("preinfP", preinfPressurePsi);
+        preferences.putUShort("preinfT", preinfTimeSec);
+        
+        Serial.print("Settings saved to default profile");
+    } else {
+        // 用户档案（profileId 1-9）
+        snprintf(key, sizeof(key), "p%d_temp", profileId);
+        preferences.putUChar(key, temperature);
+        
+        snprintf(key, sizeof(key), "p%d_brewP", profileId);
+        preferences.putFloat(key, targetPressurePsiBrew);
+        
+        snprintf(key, sizeof(key), "p%d_steamP", profileId);
+        preferences.putFloat(key, targetPressurePsiSteam);
+        
+        snprintf(key, sizeof(key), "p%d_preinfP", profileId);
+        preferences.putFloat(key, preinfPressurePsi);
+        
+        snprintf(key, sizeof(key), "p%d_preinfT", profileId);
+        preferences.putUShort(key, preinfTimeSec);
+        
+        // 标记档案存在
+        snprintf(key, sizeof(key), "p%d_exists", profileId);
+        preferences.putBool(key, true);
+        
+        Serial.print("Settings saved to profile ");
+        Serial.println(profileId);
+    }
+    
+    preferences.end();
+}
+
+void Menu::loadProfile(uint8_t profileId) {
+    if (!preferences.begin(NVS_NAMESPACE, true)) {
+        Serial.println("Failed to open preferences for loading!");
+        return;
+    }
+    
+    char key[32];
+    bool hasData = false;
+    
+    if (profileId == 0) {
+        // 加载默认设置
+        if (preferences.isKey("temp")) {
+            temperature = preferences.getUChar("temp", 70);
+            hasData = true;
+        }
+        if (preferences.isKey("brewP")) {
+            targetPressurePsiBrew = preferences.getFloat("brewP", 40.0f);
+            hasData = true;
+        }
+        if (preferences.isKey("steamP")) {
+            targetPressurePsiSteam = preferences.getFloat("steamP", 20.0f);
+            hasData = true;
+        }
+        if (preferences.isKey("preinfP")) {
+            preinfPressurePsi = preferences.getFloat("preinfP", 20.0f);
+            hasData = true;
+        }
+        if (preferences.isKey("preinfT")) {
+            preinfTimeSec = preferences.getUShort("preinfT", 5);
+            hasData = true;
+        }
+        
+        if (hasData) {
+            Serial.println("Settings loaded from default profile");
+        } else {
+            Serial.println("No saved settings found, using defaults");
+        }
+    } else {
+        // 加载用户档案
+        snprintf(key, sizeof(key), "p%d_exists", profileId);
+        if (!preferences.getBool(key, false)) {
+            Serial.print("Profile ");
+            Serial.print(profileId);
+            Serial.println(" does not exist");
+            preferences.end();
+            return;
+        }
+        
+        snprintf(key, sizeof(key), "p%d_temp", profileId);
+        temperature = preferences.getUChar(key, 70);
+        
+        snprintf(key, sizeof(key), "p%d_brewP", profileId);
+        targetPressurePsiBrew = preferences.getFloat(key, 40.0f);
+        
+        snprintf(key, sizeof(key), "p%d_steamP", profileId);
+        targetPressurePsiSteam = preferences.getFloat(key, 20.0f);
+        
+        snprintf(key, sizeof(key), "p%d_preinfP", profileId);
+        preinfPressurePsi = preferences.getFloat(key, 20.0f);
+        
+        snprintf(key, sizeof(key), "p%d_preinfT", profileId);
+        preinfTimeSec = preferences.getUShort(key, 5);
+        
+        currentProfileId = profileId;
+        
+        Serial.print("Settings loaded from profile ");
+        Serial.println(profileId);
+    }
+    
+    preferences.end();
+}
 

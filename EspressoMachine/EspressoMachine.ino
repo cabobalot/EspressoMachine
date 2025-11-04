@@ -51,6 +51,8 @@ void setup() {
     Serial.println(F("SSD1306 allocation failed"));
     for(;;);
   }
+  // 加载保存的设置
+  menu.loadSettings();
   //temp
   tempControl::init();
   //presure

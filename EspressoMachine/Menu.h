@@ -6,6 +6,7 @@
 // #include <Adafruit_SSD1306.h>
 #include <Adafruit_SH110X.h>
 #include "bitmaps.h"
+#include <Preferences.h>  // 用于持久化存储设置
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64  // OLED 屏幕是 128x32
@@ -96,7 +97,15 @@ public:
     void startSteamTimer() { steamStartTime = millis(); }
     //state control
     void setState(MenuState s);     // 仅切换页面状态，不直接绘制
-    void resetBrewAnimation();   
+    void resetBrewAnimation();
+    // 设置持久化存储
+    void saveSettings();            // 保存当前设置到NVS
+    void loadSettings();             // 从NVS加载设置
+    // 用户档案管理（为第二步功能预留）
+    void saveProfile(uint8_t profileId);  // 保存当前设置到指定档案
+    void loadProfile(uint8_t profileId);  // 从指定档案加载设置
+    uint8_t getCurrentProfileId() const { return currentProfileId; }
+    void setCurrentProfileId(uint8_t id) { currentProfileId = id; }
       
 private:
     void showSidebarInfo();
@@ -126,6 +135,11 @@ private:
     uint32_t _pressCount    = 0;
     static constexpr uint16_t DEBOUNCE_MS = 15;
     bool _clicked=false;
+    
+    // Preferences存储
+    Preferences preferences;
+    static const char* NVS_NAMESPACE;  // NVS命名空间
+    uint8_t currentProfileId = 0;      // 当前使用的档案ID（0=默认设置，1-9=用户档案）
 };
 
 extern Menu menu;
