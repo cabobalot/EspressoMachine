@@ -40,7 +40,7 @@ private:
     float currentTemperature = 0; 
     float currentPressurePsi = 0.0;
     //Default Value
-    float targetPressurePsiBrew  = 40.0f;  // Default for brew pressure
+    float targetPressurePsiBrew  = 120.0f;  // Default for brew pressure
     float targetPressurePsiSteam = 20.0f;  // Default for steam pressure
     float   preinfPressurePsi = 20.0f;   // default 20 PSI
     uint16_t preinfTimeSec    = 5;      // default 5

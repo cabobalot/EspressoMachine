@@ -4,9 +4,11 @@
 Menu menu;
 Menu* Menu::_self = nullptr;
 
-Menu::Menu() : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET) {}
+Menu::Menu() : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET, 800000UL, 800000UL) {}
 
 bool Menu::begin() {
+    Wire.begin(PIN_SCREEN_SDA, PIN_SCREEN_SCL);
+    Wire.setClock(800000UL);
     if (!display.begin(0x3C, true)) {
         return false;
     }
@@ -127,13 +129,13 @@ void Menu::show() {
     }else if (currentState == WATER_PAGE){      // <--- 新增
         showWaterPage();
     }
-    
+
     display.display();
 }
 
 void Menu::moveSelection(bool up) {
     if (currentState == SETTING_PAGE && isEditingTemperature) {
-            if (up && temperature < 100) temperature++;
+            if (up && temperature < 150) temperature++;
             if (!up && temperature > 30) temperature--;
             return;
         }

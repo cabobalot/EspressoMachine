@@ -6,6 +6,8 @@
 #include "pressure_control.h" 
 #include "tempControl.h" 
 
+#include "timingTestDebug.h"
+
 
 #define TEMPERATURE_OFFSET 7 // stock calibration offset
 
@@ -15,13 +17,15 @@ PressureControl pc(5, 0.0, 0.1);
 
 TaskHandle_t mainTask;
 TaskHandle_t uiTask;
+TaskHandle_t screenShowTask;
 
 void mainLoop(void * pvParameters);
 void uiLoop(void * pvParameters);
+void screenShowLoop(void * pvParameters);
 
-static volatile float targetTemperature = 70; 
-static volatile float targetPressureBrew  = 40.0f;  // TODO
-static volatile float targetPressureSteam = 20.0f;  //
+static volatile float targetTemperature = 95;
+static volatile float targetPressureBrew  = 120.0f;
+static volatile float targetPressureSteam = 25.0f;
 static volatile float currentTemperature = 0;
 static volatile float currentPressure = 0;
 
@@ -45,32 +49,23 @@ static volatile MachineState machineState = IDLE_STATE;
 void setup() {
   Serial.begin(115200);
 
-  Wire.begin(PIN_SCREEN_SDA, PIN_SCREEN_SCL); // TODO put this inside the menu class, also clock needs to be 800kHz
-  Wire.setClock(400000); 
-  if (!menu.begin()) {
+  if (!menu.begin()) { // doing this here so we have serial if it fails
     Serial.println(F("SSD1306 allocation failed"));
     for(;;);
   }
-  //temp
-  tempControl::init();
-  //presure
-  pinMode(PIN_PRESSURE_SENSE, INPUT);
-  pc.init(PIN_DIMMER_CONTROL, PIN_DIMMER_ZERO_CROSS);
-  //temporary init
-  pc.setAlwaysOff();
 
-  menu.beginInput(PIN_KNOB_ROTATE_A, PIN_KNOB_ROTATE_B, PIN_KNOB_BUTTON); // TODO put this inside the menu class
-
-  pinMode(PIN_SWITCH_BREW, INPUT_PULLUP);
-  pinMode(PIN_SWITCH_STEAM, INPUT_PULLUP);
-
-  pinMode(PIN_SOLENOID, OUTPUT);
-  digitalWrite(PIN_SOLENOID, LOW);
-
-  xTaskCreate(uiLoop, "uiLoop", 10000, NULL, 0, &uiTask);
-  xTaskCreate(mainLoop, "mainLoop", 10000, NULL, 0, &mainTask);
-
+  xTaskCreatePinnedToCore(uiLoop, "uiLoop", 10000, NULL, 1, &uiTask, 1);
+  xTaskCreatePinnedToCore(mainLoop, "mainLoop", 10000, NULL, 1, &mainTask, 1);
+  xTaskCreatePinnedToCore(screenShowLoop, "screenShowLoop", 10000, NULL, 1, &screenShowTask, 0);
 }
+
+void screenShowLoop(void * pvParameters) {
+  for(;;) {
+    menu.show();
+    vTaskDelay(50 / portTICK_PERIOD_MS); // 20 FPS max
+  }
+}
+
 void uiLoop(void * pvParameters) {
   // --- debounce state ---
   static bool     lastBrewRaw  = false,  brewStable  = false;
@@ -78,11 +73,18 @@ void uiLoop(void * pvParameters) {
   static uint32_t brewEdgeMs   = 0,      steamEdgeMs = 0;
   const  uint16_t DEBOUNCE_MS  = 30;
 
+  menu.beginInput(PIN_KNOB_ROTATE_A, PIN_KNOB_ROTATE_B, PIN_KNOB_BUTTON); // pins an interrupt on this core
+
+  pinMode(PIN_SWITCH_BREW, INPUT_PULLUP);
+  pinMode(PIN_SWITCH_STEAM, INPUT_PULLUP);
+
   for(;;) {
     // ===================== UI input & rendering =====================
-    menu.pollInput();
-    menu.show();
 
+    TIME_START = millis();
+
+    menu.pollInput();
+    
     int step = menu.consumeStep();
     if (step != 0) menu.moveSelection(step > 0);
     if (menu.consumeClick()) menu.select();
@@ -151,7 +153,9 @@ void uiLoop(void * pvParameters) {
       }
     }
 
-    yield();
+    // yield();
+    vTaskDelay(20 / portTICK_PERIOD_MS); // 
+
   }
 }
 
@@ -235,8 +239,20 @@ void uiLoop(void * pvParameters) {
 // }
 
 void mainLoop(void * pvParameters) {
-  for(;;) {
+  //temperature
+  tempControl::init();
+  //presure
+  pinMode(PIN_PRESSURE_SENSE, INPUT);
+  pc.init(PIN_DIMMER_CONTROL, PIN_DIMMER_ZERO_CROSS); // this pins an interrupt to this core
 
+  // init
+  pc.setAlwaysOff();
+
+  pinMode(PIN_SOLENOID, OUTPUT);
+  digitalWrite(PIN_SOLENOID, LOW);
+
+
+  for(;;) {
     switch (machineState) {
     case IDLE_STATE:
       pc.setAlwaysOff();
@@ -281,13 +297,9 @@ void mainLoop(void * pvParameters) {
     tempControl::update();
 
     
-    // TIME_END = millis();
-    
-    static unsigned long TIME_LAST_PRINT = 0;
-    if (millis() - TIME_LAST_PRINT >= 210) {
-      TIME_LAST_PRINT = millis();
-      // Serial.print("last time:");
-      // Serial.println(TIME_END - TIME_START);
+    static unsigned long timeLastPrint = 0;
+    if (millis() - timeLastPrint >= 1000) {
+      timeLastPrint = millis();
 
       // Serial.printf("temp:%.1f, tempset:%.1f, pres:%.1f, pressSet:%.1f\r\n", currentTemperature, targetTemperature, currentPressure, targetPressure);
 
@@ -303,26 +315,18 @@ void mainLoop(void * pvParameters) {
       Serial.print(",targetPress:");
       Serial.println(currentTargetPressure, 2);
 
-      // Serial.flush();
+      Serial.print("UI core: ");
+      Serial.print(xTaskGetCoreID(uiTask));
+      Serial.print(" main core: ");
+      Serial.println(xTaskGetCoreID(mainTask));
+
     }
 
-    
-
-    // taskYIELD(); // do we need this or is yield() fine?
+    // pretty sure we dont need a taskDelay here but maybe
     yield();
   }
 }
 
 void loop() {
-  // static unsigned long TIME_START = 0;
-  // static unsigned long TIME_END = 0;
-
-  
-  // static unsigned long TIME_LAST_PRINT = 0;
-  // if (millis() - TIME_LAST_PRINT >= 1000) {
-  //   TIME_LAST_PRINT = millis();
-  //   Serial.print("last time:");
-  //   Serial.println(TIME_END - TIME_START);
-  // }
 
 }
