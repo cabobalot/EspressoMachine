@@ -127,11 +127,12 @@
   </div>
 
   <script>
-    const maxPoints = 20;
+    const maxPoints = 60;
     const tempData = [];
     const pressureData = [];
     const tempSetpointData = [];
     const pressureSetpointData = [];
+    let startTime = Date.now();
 
     function drawGraph(svgId, data, setpointData, yMin, yMax, strokeColor, setpointColor) {
       const svg = document.getElementById(svgId);
@@ -139,6 +140,33 @@
       const height = svg.clientHeight;
       svg.innerHTML = '';
       if(data.length < 2) return;
+
+      const gridLines = 10;
+      for (let i = 0; i <= gridLines; i++) {
+        const y = (i / gridLines) * height;
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', 0);
+        line.setAttribute('y1', y);
+        line.setAttribute('x2', width);
+        line.setAttribute('y2', y);
+        line.setAttribute('stroke', '#ccc');
+        line.setAttribute('stroke-width', '1');
+        line.setAttribute('opacity', '0.5');
+        svg.appendChild(line);
+      }
+      
+      for (let i = 0; i < maxPoints; i += 1) {
+        const x = (i / (maxPoints - 1)) * width;
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x);
+        line.setAttribute('y1', 0);
+        line.setAttribute('x2', x);
+        line.setAttribute('y2', height);
+        line.setAttribute('stroke', '#ccc');
+        line.setAttribute('stroke-width', '1');
+        line.setAttribute('opacity', '0.5');
+        svg.appendChild(line);
+      }
 
       const points = data.map((val, idx) => {
         const x = (idx / (maxPoints - 1)) * width;
@@ -192,6 +220,18 @@
       yMaxText.setAttribute('fill', '#333');
       yMaxText.textContent = yMax.toFixed(1);
       svg.appendChild(yMaxText);
+
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const xMaxTime = elapsed;
+
+      const xMaxText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      xMaxText.setAttribute('x', width - 5);
+      xMaxText.setAttribute('y', height - 5);
+      xMaxText.setAttribute('font-size', '12'); 
+      xMaxText.setAttribute('fill', '#333');
+      xMaxText.setAttribute('text-anchor', 'end');
+      xMaxText.textContent = xMaxTime.toFixed(0) + 's';
+      svg.appendChild(xMaxText);
     }
 
     function updateData() {
@@ -219,9 +259,9 @@
         drawGraph('tempGraph', tempData, tempSetpointData, 0, 160, '#ff5733', '#ff5733');
         drawGraph('pressureGraph', pressureData, pressureSetpointData, 0, 140, '#3377ff', '#3377ff');
       }).catch(err => console.error('Fetch error:', err));
-    }
+    } 
 
-    setInterval(updateData, 500);
+    setInterval(updateData, 1000);
     updateData();
   </script>
 </body>
