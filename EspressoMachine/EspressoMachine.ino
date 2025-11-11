@@ -90,7 +90,13 @@ void uiLoop(void * pvParameters) {
     if (menu.consumeClick()) menu.select();
 
     // Targets from UI
-    targetTemperature = menu.getTargetTemperature() + TEMPERATURE_OFFSET;
+    // 根据当前模式选择对应的温度
+    if (machineState == STEAM_STATE) {
+      targetTemperature = menu.getTargetTemperatureSteam() + TEMPERATURE_OFFSET;
+    } else {
+      // BREW_STATE, IDLE_STATE, HOT_WATER_STATE 使用brew温度
+      targetTemperature = menu.getTargetTemperatureBrew() + TEMPERATURE_OFFSET;
+    }
     targetPressureBrew  = menu.getTargetPressureBrew();
     targetPressureSteam = menu.getTargetPressureSteam();
     preinfusePressure   = menu.getPreinfPressure(); 
@@ -157,85 +163,6 @@ void uiLoop(void * pvParameters) {
   }
 }
 
-// void uiLoop(void * pvParameters) {
-//   // --- debounce state (no helpers, minimal) ---
-//   static bool     lastBrewRaw  = false,  brewStable  = false;  // raw last & debounced stable
-//   static bool     lastSteamRaw = false,  steamStable = false;
-//   static uint32_t brewEdgeMs   = 0,      steamEdgeMs = 0;
-//   const  uint16_t DEBOUNCE_MS  = 30;
-
-//   for(;;) {
-//     // ===================== UI input & rendering =====================
-//     menu.pollInput();
-//     menu.show();
-
-//     int step = menu.consumeStep();
-//     if (step != 0) menu.moveSelection(step > 0);
-//     if (menu.consumeClick()) menu.select();
-
-//     // Targets from UI
-//     targetTemperature = menu.getTargetTemperature() + TEMPERATURE_OFFSET;
-//     //TODO
-//     targetPressureBrew  = menu.getTargetPressureBrew();
-//     targetPressureSteam = menu.getTargetPressureSteam();
-//     preinfusePressure = menu.getPreinfPressure(); 
-//     preinfuseTime     = menu.getPreinfTimeSec();
-
-//     // Live values back to UI
-//     menu.setCurrentTemperature(currentTemperature - TEMPERATURE_OFFSET);
-//     menu.setCurrentPressure(currentPressure);
-
-//     // ===================== Switch handling (level-based, both edges) =====================
-//     // Active-low hardware switches: LOW = "ON / pressed", HIGH = "OFF / released".
-//     bool rawBrew  = !digitalRead(PIN_SWITCH_BREW);
-//     bool rawSteam = !digitalRead(PIN_SWITCH_STEAM);
-//     uint32_t now  = millis();
-
-//     // --- Brew: debounce to get a stable logical state (brewStable) ---
-//     if (rawBrew != lastBrewRaw) { lastBrewRaw = rawBrew; brewEdgeMs = now; }
-//     if ((now - brewEdgeMs) >= DEBOUNCE_MS && rawBrew != brewStable) {
-//       brewStable = rawBrew;  // stable state changed
-
-//       if (brewStable) {
-//         // Brew switch turned ON  → enter BREW (and leave other modes)
-//         if (machineState != BREW_STATE) {
-//           machineState = BREW_STATE;
-//           menu.setState(BREW_PAGE);      // reset brew timer inside setState
-//           menu.resetBrewAnimation();
-//         }
-//       } else {
-//         // Brew switch turned OFF → if we are in BREW, exit to MAIN
-//         if (machineState == BREW_STATE) {
-//           machineState = IDLE_STATE;
-//           menu.setState(MAIN_MENU);
-//         }
-//       }
-//     }
-
-//     // --- Steam: debounce to get a stable logical state (steamStable) ---
-//     if (rawSteam != lastSteamRaw) { lastSteamRaw = rawSteam; steamEdgeMs = now; }
-//     if ((now - steamEdgeMs) >= DEBOUNCE_MS && rawSteam != steamStable) {
-//       steamStable = rawSteam;  // stable state changed
-
-//       if (steamStable) {
-//         // Steam switch turned ON → enter STEAM (and leave other modes)
-//         if (machineState != STEAM_STATE) {
-//           machineState = STEAM_STATE;
-//           menu.setState(STEAM_PAGE);     // reset steam timer inside setState
-//         }
-//       } else {
-//         // Steam switch turned OFF → if we are in STEAM, exit to MAIN
-//         if (machineState == STEAM_STATE) {
-//           machineState = IDLE_STATE;
-//           menu.setState(MAIN_MENU);
-//         }
-//       }
-//     }
-
-//     yield();
-//   }
-// }
-
 void mainLoop(void * pvParameters) {
   for(;;) {
 
@@ -294,16 +221,16 @@ void mainLoop(void * pvParameters) {
       // Serial.printf("temp:%.1f, tempset:%.1f, pres:%.1f, pressSet:%.1f\r\n", currentTemperature, targetTemperature, currentPressure, targetPressure);
 
 
-      Serial.print(">temp:");
-      Serial.print(currentTemperature, 2);
-      Serial.print(",tempset:");
-      Serial.print(targetTemperature, 2);
-      Serial.print(",pres:");
-      Serial.print(currentPressure, 2);
-      Serial.print(",pressSet:");
-      Serial.print(targetPressureBrew, 2);
-      Serial.print(",targetPress:");
-      Serial.println(currentTargetPressure, 2);
+      // Serial.print(">temp:");
+      // Serial.print(currentTemperature, 2);
+      // Serial.print(",tempset:");
+      // Serial.print(targetTemperature, 2);
+      // Serial.print(",pres:");
+      // Serial.print(currentPressure, 2);
+      // Serial.print(",pressSet:");
+      // Serial.print(targetPressureBrew, 2);
+      // Serial.print(",targetPress:");
+      // Serial.println(currentTargetPressure, 2);
 
       // Serial.flush();
     }
