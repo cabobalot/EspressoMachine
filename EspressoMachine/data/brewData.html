@@ -70,10 +70,10 @@
     }
     .stateIndicator {
       display: inline-block;
-      padding: 8px 16px;
+      padding: 20px 40px;
       border-radius: 5px;
       font-weight: bold;
-      margin: 10px 0;
+      margin: 40px 40px 0px 40px;
     }
     .stateBrew {
       background-color: #4CAF50;
@@ -87,7 +87,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>Sensor Data</h1>
+    <h1>Gagginator Data</h1>
     <table>
       <tr>
         <th>Sensor</th>
@@ -149,7 +149,6 @@
     const pressureData = [];
     const tempSetpointData = [];
     const pressureSetpointData = [];
-    let startTime = Date.now();
     let currentState = "";
     let wasInBrewState = false;
 
@@ -229,7 +228,7 @@
       yMinText.setAttribute('y', height - 5);
       yMinText.setAttribute('font-size', '12');
       yMinText.setAttribute('fill', '#333');
-      yMinText.textContent = yMin.toFixed(1);
+      yMinText.textContent = yMin.toFixed(0);
       svg.appendChild(yMinText);
     
       const yMaxText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -237,11 +236,10 @@
       yMaxText.setAttribute('y', 15);
       yMaxText.setAttribute('font-size', '12');
       yMaxText.setAttribute('fill', '#333');
-      yMaxText.textContent = yMax.toFixed(1);
+      yMaxText.textContent = yMax.toFixed(0);
       svg.appendChild(yMaxText);
 
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      const xMaxTime = elapsed;
+      const xMaxTime = 60;
 
       const xMaxText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       xMaxText.setAttribute('x', width - 5);
@@ -282,7 +280,6 @@
           pressureData.length = 0;
           tempSetpointData.length = 0;
           pressureSetpointData.length = 0;
-          startTime = Date.now(); 
         }
 
         if (data.machineState == "BREW_STATE") {
