@@ -315,10 +315,10 @@ void mainLoop(void * pvParameters) {
       Serial.print(",targetPress:");
       Serial.println(currentTargetPressure, 2);
 
-      Serial.print("UI core: ");
-      Serial.print(xTaskGetCoreID(uiTask));
-      Serial.print(" main core: ");
-      Serial.println(xTaskGetCoreID(mainTask));
+      // Serial.print("UI core: ");
+      // Serial.print(xTaskGetCoreID(uiTask));
+      // Serial.print(" main core: ");
+      // Serial.println(xTaskGetCoreID(mainTask));
 
     }
 
