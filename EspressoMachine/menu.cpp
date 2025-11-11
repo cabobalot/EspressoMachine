@@ -95,7 +95,11 @@ void Menu::setState(MenuState s) {
         lastFrameTime = 0;
         currentFrame = 0;
     }else if (s == BREW_PAGE) {
-        brewStartTime = millis();
+    brewStartTime = millis();
+    lastFrameTime = 0;
+    currentFrame  = 0;
+    }else if (s == WATER_PAGE) {               
+        waterStartTime = millis();
         lastFrameTime = 0;
         currentFrame  = 0;
     }
@@ -120,6 +124,8 @@ void Menu::show() {
         showBrewPage();
     } else if (currentState == STEAM_PAGE){
         showSteamPage();
+    }else if (currentState == WATER_PAGE){      // <--- 新增
+        showWaterPage();
     }
     
     display.display();
@@ -127,14 +133,21 @@ void Menu::show() {
 
 void Menu::moveSelection(bool up) {
     if (currentState == SETTING_PAGE && isEditingTemperature) {
-        if (up && temperature < 100) temperature++;
-        if (!up && temperature > 30) temperature--;
+            if (up && temperature < 100) temperature++;
+            if (!up && temperature > 30) temperature--;
+            return;
+        }
+
+    // Editing Brew Pressure
+    if (currentState == SETTING_PAGE && isEditingPressureBrew) {
+        if (up  && targetPressurePsiBrew < 150.0f)  targetPressurePsiBrew += 1.0f;
+        if (!up && targetPressurePsiBrew >   0.0f)  targetPressurePsiBrew -= 1.0f;
         return;
     }
-    
-    if (currentState == SETTING_PAGE && isEditingPressure) {
-        if (up  && targetPressurePsi < 150.0f) targetPressurePsi += 1.0f;
-        if (!up && targetPressurePsi >   0.0f) targetPressurePsi -= 1.0f;
+    // Editing Steam Pressure
+    if (currentState == SETTING_PAGE && isEditingPressureSteam) {
+        if (up  && targetPressurePsiSteam < 150.0f) targetPressurePsiSteam += 1.0f;
+        if (!up && targetPressurePsiSteam >  0.0f)  targetPressurePsiSteam -= 1.0f;
         return;
     }
     // Editing: Preinf Pressure
@@ -213,49 +226,69 @@ void Menu::select() {
         }
     } 
     else if (currentState == SETTING_PAGE) {
-        if (listSelection == 0) {  
-            // 选中 Temperature 进入温度调整模式
-            isEditingTemperature = !isEditingTemperature;  // 进入/退出编辑模式
-            if (isEditingTemperature) isEditingPressure = false; 
-        }else if (listSelection == 1){
-            isEditingPressure = !isEditingPressure;
-            if (isEditingPressure) isEditingTemperature = false; // 互斥
-        }
-        else if (listSelection == 2) { // PreinfPress
+        if (listSelection == 0) {  // Temperature
+            isEditingTemperature = !isEditingTemperature;
+            if (isEditingTemperature) {
+                isEditingPressureBrew  = false;
+                isEditingPressureSteam = false;
+                isEditingPreinfPressure = false;
+                isEditingPreinfTime     = false;
+            }
+        } else if (listSelection == 1) { // BrewPressure
+            isEditingPressureBrew = !isEditingPressureBrew;
+            if (isEditingPressureBrew) {
+                isEditingTemperature    = false;
+                isEditingPressureSteam  = false;
+                isEditingPreinfPressure = false;
+                isEditingPreinfTime     = false;
+            }
+        } else if (listSelection == 2) { // SteamPressure
+            isEditingPressureSteam = !isEditingPressureSteam;
+            if (isEditingPressureSteam) {
+                isEditingTemperature    = false;
+                isEditingPressureBrew   = false;
+                isEditingPreinfPressure = false;
+                isEditingPreinfTime     = false;
+            }
+        } else if (listSelection == 3) { // PreinfPress
             isEditingPreinfPressure = !isEditingPreinfPressure;
             if (isEditingPreinfPressure) {
-                isEditingTemperature = false;
-                isEditingPressure = false;
-                isEditingPreinfTime = false;
+                isEditingTemperature    = false;
+                isEditingPressureBrew   = false;
+                isEditingPressureSteam  = false;
+                isEditingPreinfTime     = false;
             }
-        } else if (listSelection == 3) { // PreinfTime
+        } else if (listSelection == 4) { // PreinfTime
             isEditingPreinfTime = !isEditingPreinfTime;
             if (isEditingPreinfTime) {
-                isEditingTemperature = false;
-                isEditingPressure = false;
+                isEditingTemperature    = false;
+                isEditingPressureBrew   = false;
+                isEditingPressureSteam  = false;
                 isEditingPreinfPressure = false;
             }
-        } 
-        else if (listSelection == 4) {  
-            // 选中 Back 返回主菜单
+        } else if (listSelection == 5) { // Back
             currentState = MAIN_MENU;
-            isEditingTemperature = false;
-            isEditingPressure    = false;
+            isEditingTemperature    = false;
+            isEditingPressureBrew   = false;
+            isEditingPressureSteam  = false;
+            isEditingPreinfPressure = false;
+            isEditingPreinfTime     = false;
             listSelection = 0;
-            scrollOffset = 0;
+            scrollOffset  = 0;
         }
     }
     else if (currentState == MODE_PAGE) {
         if (listSelection == 0) {          // Steam
-            currentState = STEAM_PAGE;     // ← 切到 Steam 页面
-            // lastFrameTime = 0;
-            // currentFrame  = 0;
+        currentState = STEAM_PAGE;     // ← 切到 Steam 页面
         }
         if (listSelection == 1) {  // Brew
-            currentState = BREW_PAGE;    // ← 切换状态
-            brewStartTime = millis();
+        currentState = BREW_PAGE;    // ← 切换状态
+        brewStartTime = millis();
+        }else if (listSelection == 2) {   // Water
+        currentState = WATER_PAGE;     // <--- 新增
+        waterStartTime = millis();
         } 
-        else if (listSelection == 2) {  
+        else if (listSelection == 3) {  
             // 选中 Back 返回主菜单
             currentState = MAIN_MENU;
             listSelection = 0;
@@ -312,19 +345,23 @@ void Menu::showSettingPage() {
             display.print("Temp: ");
             display.print(temperature);
             display.println("C");
-        } else if (i == 1) {  // Pressure
-            display.print("Press: ");
-            display.print(targetPressurePsi, 0);
+        } else if (i == 1) {       // BrewPressure
+            display.print("BrewP: ");
+            display.print(targetPressurePsiBrew, 0); //decimal
             display.println(" P");
-        } else if (i == 2) {  // PreinfPress
+        } else if (i == 2) {       // SteamPressure
+            display.print("SteamP: ");
+            display.print(targetPressurePsiSteam, 0);
+            display.println(" P");
+        } else if (i == 3) {  // PreinfPress
             display.print("PreP: ");
             display.print(preinfPressurePsi, 1);
-            display.println(" p");
-        } else if (i == 3) {  // PreinfTime
+            display.println(" P");
+        } else if (i == 4) {  // PreinfTime
             display.print("PreT: ");
             display.print(preinfTimeSec);
-            display.println(" s");
-        } else if (i == 4) {  // Back
+            display.println(" S");
+        } else if (i == 5) {  // Back
             display.println("Back");
         }
     }
@@ -365,25 +402,31 @@ void Menu::showBrewPage() {
     display.drawBitmap(0, 0, frame, 58, 64, SH110X_WHITE);
     
     // 倒计时计算
-    uint32_t sec = (now - brewStartTime) / 1000;
-    
-    // 显示倒计时 & 温度
     display.setCursor(70, 0);
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
+    display.println("BREW");
+
+    uint32_t sec = (now - brewStartTime) / 1000;
+    display.setCursor(70, 12);
     display.print("Time: ");
     display.print(sec);
     display.println("s");
-    
-    display.setCursor(70, 15);
+
+    display.setCursor(70, 24);
     display.print("Tar: ");
     display.print(temperature);
     display.println("C");
-    
-    display.setCursor(60, 30);
+
+    display.setCursor(60, 36);
     display.print("Cur: ");
     display.print(currentTemperature);
     display.println("C");
+
+    display.setCursor(60, 48);
+    display.print("Cur :");
+    display.print(currentPressurePsi);
+    display.println("P");
 }
 
 void Menu::showSteamPage() {
@@ -402,20 +445,63 @@ void Menu::showSteamPage() {
     display.println("STEAM");
     
     uint32_t sec = (now - steamStartTime) / 1000;
-    display.setCursor(70, 15);
+    display.setCursor(70, 12);
     display.print("Time: ");
     display.print(sec);
     display.println("s");
-    
-    display.setCursor(70, 30);
+
+    display.setCursor(70, 24);
     display.print("Tar: ");
     display.print(temperature);
     display.println("C");
-    
-    display.setCursor(60, 45);
+
+    display.setCursor(60, 36);
     display.print("Cur: ");
     display.print(currentTemperature);
     display.println("C");
+
+    display.setCursor(60, 48);
+    display.print("Cur :");
+    display.print(currentPressurePsi);
+    display.println("P");
 }
+
+void Menu::showWaterPage() {
+    unsigned long now = millis();
+    if (now - lastFrameTime >= frameInterval) {
+        currentFrame = (currentFrame + 1) % 2;
+        lastFrameTime = now;
+    }
+
+    display.drawBitmap(0, 0, water, 58, 64, SH110X_WHITE);
+
+    // Side bar
+    display.setCursor(70, 0);
+    display.setTextSize(1);
+    display.setTextColor(SH110X_WHITE);
+    display.println("WATER");
+
+    uint32_t sec = (now - waterStartTime) / 1000;
+    display.setCursor(70, 12);
+    display.print("Time: ");
+    display.print(sec);
+    display.println("s");
+
+    display.setCursor(70, 24);
+    display.print("Tar: ");
+    display.print(temperature);
+    display.println("C");
+
+    display.setCursor(60, 36);
+    display.print("Cur: ");
+    display.print(currentTemperature);
+    display.println("C");
+
+    display.setCursor(60, 48);
+    display.print("Cur :");
+    display.print(currentPressurePsi);
+    display.println("P");
+}
+
 
 

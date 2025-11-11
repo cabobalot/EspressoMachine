@@ -13,15 +13,16 @@
 
 #define MAX_MENU_ITEMS 2  
 #define MAX_VISIBLE_ITEMS 3  
-#define MAX_MODE_ITEMS 3 // mode items
-#define MAX_SETTING_ITEMS 5   // Temperature, Pressure, PreinfPress, PreinfTime, Back
+#define MAX_MODE_ITEMS 4 // mode items
+#define MAX_SETTING_ITEMS 6   // Temperature, Pressure, PreinfPress, PreinfTime, Back
 
 enum MenuState {
     MAIN_MENU,
     MODE_PAGE,
     SETTING_PAGE,
     BREW_PAGE,//brew page
-    STEAM_PAGE//steam page
+    STEAM_PAGE,//steam page
+    WATER_PAGE
 };
 
 class Menu {
@@ -31,25 +32,31 @@ private:
     int8_t listSelection = 0;  // 当前选中的菜单项
     int8_t scrollOffset = 0;   // 滚动偏移量
     const char* menuItems[MAX_MENU_ITEMS] = {"Mode", "Setting"};
-    const char* modeMenuItems[MAX_MODE_ITEMS] = {"Steam", "Brew", "Back"};
-    const char* settingMenuItems[MAX_SETTING_ITEMS] = {"Temperature", "Pressure", "PreinfPress", "PreinfTime", "Back"}; 
+    const char* modeMenuItems[MAX_MODE_ITEMS] = {"Steam", "Brew", "Water", "Back"};
+    const char* settingMenuItems[MAX_SETTING_ITEMS] = {"Temperature", "BrewPressure", "SteamPressure","PreinfPress", "PreinfTime", "Back"}; 
     MenuState currentState = MAIN_MENU; 
     //setter for pressure and temp
     uint8_t temperature = 100;
     float currentTemperature = 0; 
     float currentPressurePsi = 0.0;
-    float targetPressurePsi = 100.0f;
-    float   preinfPressurePsi = 20.0f;   // default 20
+    //Default Value
+    float targetPressurePsiBrew  = 40.0f;  // Default for brew pressure
+    float targetPressurePsiSteam = 20.0f;  // Default for steam pressure
+    float   preinfPressurePsi = 20.0f;   // default 20 PSI
     uint16_t preinfTimeSec    = 5;      // default 5
     bool isEditingPreinfPressure = false;
     bool isEditingPreinfTime     = false;
-    bool isEditingPressure    = false;
+    //Editing pressure
+    bool  isEditingPressureBrew  = false;
+    bool  isEditingPressureSteam = false;
     bool isEditingTemperature = false;
     //count for brew screen
     unsigned long brewStartTime = 0;
     unsigned long lastFrameTime = 0;
     // count for steam screen
     unsigned long steamStartTime = 0;
+    //count for water page
+    unsigned long waterStartTime = 0; 
     int currentFrame = 0;
     const unsigned long frameInterval = 500;
 
@@ -69,8 +76,11 @@ public:
     float getTargetTemperature() const;
     //pressure
     void setCurrentPressure(float psi);
-    void  setTargetPressure(float psi) { targetPressurePsi = psi; }
-    float getTargetPressure() const    { return targetPressurePsi; }
+    // Brew & Steam target pressure
+    void  setTargetPressureBrew(float psi)  { targetPressurePsiBrew  = psi; }
+    void  setTargetPressureSteam(float psi) { targetPressurePsiSteam = psi; }
+    float getTargetPressureBrew() const     { return targetPressurePsiBrew; }
+    float getTargetPressureSteam() const    { return targetPressurePsiSteam; }
     //Encoder Function
     bool beginInput(int pinA, int pinB, int pinBtn);
     void pollInput();
@@ -95,6 +105,7 @@ private:
     void showSettingPage();
     void showTemperatureSetting();
     void showBrewPage();
+    void showWaterPage();
     // encoder
     int _pinA=-1, _pinB=-1, _pinBtn=-1;
 
