@@ -6,9 +6,16 @@ private:
 
 public:
 
-  static void init();
+  enum MachineState {
+    IDLE_STATE,
+    BREW_STATE,
+    STEAM_STATE,
+    HOT_WATER_STATE
+  };
 
-  static void update(float temp, float pressure, float tempSetPoint, float pressureSetPoint);
+	static void init();
+
+  static void update(float temp, float pressure, float tempSetPoint, float pressureSetPoint, MachineState state);
 
 };
 
