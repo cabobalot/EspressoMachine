@@ -4,6 +4,7 @@
 #include <FS.h>
 #include <WebServer.h>
 #include <LittleFS.h>
+#include "EspressoMachine.h"
 
 // WiFi credentials
 const char* ssid = "Bean-Team-ESP";
@@ -11,11 +12,12 @@ const char* password = "";
 
 WebServer server(80);
 
-
 String temperatureValue = "0.0";
 String pressureValue = "0.0";
 String temperatureSetpoint = "0.0";
 String pressureSetpoint = "0.0";
+String machineState = "";
+
 
 void dataWebPage::init() {
   Serial.begin(115200);
@@ -48,7 +50,8 @@ void dataWebPage::init() {
     json += "\"temp\":" + temperatureValue + ",";
     json += "\"pressure\":" + pressureValue + ",";
     json += "\"tempSet\":" + temperatureSetpoint + ",";
-    json += "\"pressureSet\":" + pressureSetpoint;
+    json += "\"pressureSet\":" + pressureSetpoint + ",";
+    json += "\"machineState\":\"" + machineState + "\"";
     json += "}";
     server.send(200, "application/json", json);
   });
@@ -57,13 +60,31 @@ void dataWebPage::init() {
   server.begin();
 }
 
-void dataWebPage::update(float temp, float pressure, float tempSetPoint, float pressureSetPoint){
+void dataWebPage::update(float temp, float pressure, float tempSetPoint, float pressureSetPoint, MachineState state){
   
   // parse floats into strings
-  temperatureValue = String(temp, 1);
-  pressureValue = String(pressure, 1);
-  temperatureSetpoint = String(tempSetPoint, 1);
-  pressureSetpoint = String(pressureSetPoint, 1);
+    temperatureValue = String(temp, 1);
+    pressureValue = String(pressure, 1);
+    temperatureSetpoint = String(tempSetPoint, 1);
+    pressureSetpoint = String(pressureSetPoint, 1);
+
+    switch (state) {
+      case BREW_STATE:
+        machineState = String("BREW_STATE");
+        break;
+      case IDLE_STATE:
+        machineState = String("IDLE_STATE");
+        break;
+      case STEAM_STATE:
+        machineState = String("STEAM_STATE");
+        break;
+      case HOT_WATER_STATE:
+        machineState = String("HOT_WATER_STATE");
+        break;
+      default:
+        machineState = ""; 
+        break;
+    }
 
   server.handleClient();
 }

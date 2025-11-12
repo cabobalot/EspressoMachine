@@ -6,6 +6,7 @@
 #include "pressure_control.h" 
 #include "tempControl.h" 
 #include "dataWebPage.h"
+#include "EspressoMachine.h"
 
 
 #define TEMPERATURE_OFFSET 7 // stock calibration offset
@@ -27,15 +28,6 @@ static volatile float currentPressure = 0;
 
 static volatile float preinfusePressure = 20;
 static volatile unsigned long preinfuseTime = 10;
-
-
-
-enum MachineState {
-  IDLE_STATE,
-  BREW_STATE,
-  STEAM_STATE,
-  HOT_WATER_STATE
-};
 
 static volatile MachineState machineState = IDLE_STATE;
 
@@ -92,7 +84,7 @@ void uiLoop(void * pvParameters) {
     menu.setCurrentTemperature(currentTemperature - TEMPERATURE_OFFSET);
     menu.setCurrentPressure(currentPressure);
 
-    dataWebPage::update(currentTemperature - TEMPERATURE_OFFSET, currentPressure, targetTemperature, targetPressure);
+    dataWebPage::update(currentTemperature - TEMPERATURE_OFFSET, currentPressure, targetTemperature, targetPressure, machineState);
 
     // state switch
     bool brewSwitch = !digitalRead(PIN_SWITCH_BREW); // active low
