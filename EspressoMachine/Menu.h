@@ -13,14 +13,16 @@
 
 #define MAX_MENU_ITEMS 2  
 #define MAX_VISIBLE_ITEMS 3  
-#define MAX_MODE_ITEMS 3 // mode items
-#define MAX_SETTING_ITEMS 3
+#define MAX_MODE_ITEMS 4 // mode items
+#define MAX_SETTING_ITEMS 6   // Temperature, Pressure, PreinfPress, PreinfTime, Back
 
 enum MenuState {
     MAIN_MENU,
     MODE_PAGE,
     SETTING_PAGE,
-    BREW_PAGE
+    BREW_PAGE,//brew page
+    STEAM_PAGE,//steam page
+    WATER_PAGE
 };
 
 class Menu {
@@ -29,20 +31,32 @@ private:
     Adafruit_SH1106G display;
     int8_t listSelection = 0;  // 当前选中的菜单项
     int8_t scrollOffset = 0;   // 滚动偏移量
-    MenuState currentState = MAIN_MENU;
     const char* menuItems[MAX_MENU_ITEMS] = {"Mode", "Setting"};
-    const char* modeMenuItems[MAX_MODE_ITEMS] = {"Steam", "Brew", "Back"};
-    const char* settingMenuItems[MAX_SETTING_ITEMS] = {"Temperature","Pressure","Back"}; 
+    const char* modeMenuItems[MAX_MODE_ITEMS] = {"Steam", "Brew", "Water", "Back"};
+    const char* settingMenuItems[MAX_SETTING_ITEMS] = {"Temperature", "BrewPressure", "SteamPressure","PreinfPress", "PreinfTime", "Back"}; 
+    MenuState currentState = MAIN_MENU; 
     //setter for pressure and temp
-    uint8_t temperature = 70;
+    uint8_t temperature = 100;
     float currentTemperature = 0; 
     float currentPressurePsi = 0.0;
-    float targetPressurePsi = 90.0f;
-    bool isEditingPressure    = false;
+    //Default Value
+    float targetPressurePsiBrew  = 120.0f;  // Default for brew pressure
+    float targetPressurePsiSteam = 20.0f;  // Default for steam pressure
+    float   preinfPressurePsi = 20.0f;   // default 20 PSI
+    uint16_t preinfTimeSec    = 5;      // default 5
+    bool isEditingPreinfPressure = false;
+    bool isEditingPreinfTime     = false;
+    //Editing pressure
+    bool  isEditingPressureBrew  = false;
+    bool  isEditingPressureSteam = false;
     bool isEditingTemperature = false;
     //count for brew screen
     unsigned long brewStartTime = 0;
     unsigned long lastFrameTime = 0;
+    // count for steam screen
+    unsigned long steamStartTime = 0;
+    //count for water page
+    unsigned long waterStartTime = 0; 
     int currentFrame = 0;
     const unsigned long frameInterval = 500;
 
@@ -52,18 +66,38 @@ public:
     void show();
     void moveSelection(bool up);
     void select();
+    //prefinpressure and prefintime
+    float   getPreinfPressure() const { return preinfPressurePsi; }
+    uint16_t getPreinfTimeSec() const { return preinfTimeSec; }
+    void    setPreinfPressure(float psi) { preinfPressurePsi = psi; }
+    void    setPreinfTimeSec(uint16_t s) { preinfTimeSec = s; }
     //Temp
     void setCurrentTemperature(float temp);
     float getTargetTemperature() const;
     //pressure
     void setCurrentPressure(float psi);
-    void  setTargetPressure(float psi) { targetPressurePsi = psi; }
-    float getTargetPressure() const    { return targetPressurePsi; }
+    // Brew & Steam target pressure
+    void  setTargetPressureBrew(float psi)  { targetPressurePsiBrew  = psi; }
+    void  setTargetPressureSteam(float psi) { targetPressurePsiSteam = psi; }
+    float getTargetPressureBrew() const     { return targetPressurePsiBrew; }
+    float getTargetPressureSteam() const    { return targetPressurePsiSteam; }
     //Encoder Function
     bool beginInput(int pinA, int pinB, int pinBtn);
     void pollInput();
     bool consumeClick();  
-    int  consumeStep();  
+    int  consumeStep(); 
+    //State machine
+    void showIdlePage();          // back to home page
+    void showBrewPagePublic();    // brew page start pressure control
+    void startBrewAnimation();    // start animation 
+    void stopBrewAnimation(); 
+    void showSteamPage();
+    //Steam page
+    void startSteamTimer() { steamStartTime = millis(); }
+    //state control
+    void setState(MenuState s);     // 仅切换页面状态，不直接绘制
+    void resetBrewAnimation();   
+      
 private:
     void showSidebarInfo();
     void showMainMenu();
@@ -71,6 +105,7 @@ private:
     void showSettingPage();
     void showTemperatureSetting();
     void showBrewPage();
+    void showWaterPage();
     // encoder
     int _pinA=-1, _pinB=-1, _pinBtn=-1;
 
@@ -83,9 +118,13 @@ private:
     volatile bool _encUp=false;
     volatile int  _stepAccum=0;
 
-    // select
-    unsigned long _debounceDeadline=0;
-    bool _pressed=false;
+    // Debounce state (new)
+    bool     _btnPrevRaw    = false;
+    bool     _btnStable     = false;
+    bool     _btnLatched    = false;
+    uint32_t _btnEdgeTimeMs = 0;
+    uint32_t _pressCount    = 0;
+    static constexpr uint16_t DEBOUNCE_MS = 15;
     bool _clicked=false;
 };
 
