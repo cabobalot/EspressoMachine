@@ -83,6 +83,15 @@
       background-color: #9E9E9E;
       color: white;
     }
+    .stateSteam {
+      background-color: #6495ED;
+      color: white;
+    }
+    .stateHotWater {
+      background-color: #FF4433;
+      color: white;
+    }
+
   </style>
 </head>
 <body>
@@ -150,7 +159,7 @@
     const tempSetpointData = [];
     const pressureSetpointData = [];
     let currentState = "";
-    let wasInBrewState = false;
+    let wasInGraphingState = false;
 
     function drawGraph(svgId, data, setpointData, yMin, yMax, strokeColor, setpointColor) {
       const svg = document.getElementById(svgId);
@@ -270,19 +279,30 @@
         if (data.machineState == "BREW_STATE") {
           stateIndicator.textContent = "BREWING";
           stateIndicator.className = "stateIndicator stateBrew";
-        } else {
+        } 
+        else if (data.machineState == "STEAM_STATE") {
+          stateIndicator.textContent = "STEAM";
+          stateIndicator.className = "stateIndicator stateSteam";
+        }
+        else if (data.machineState == "HOT_WATER_STATE") {
+          stateIndicator.textContent = "HOT WATER";
+          stateIndicator.className = "stateIndicator stateHotWater";
+        }
+        else {
           stateIndicator.textContent = "IDLE";
           stateIndicator.className = "stateIndicator stateIdle";
         }
 
-        if (wasInBrewState && data.machineState !== "BREW_STATE") {
+        const isInGraphingState = (data.machineState == "BREW_STATE" || data.machineState == "STEAM_STATE");
+
+        if (wasInGraphingState && !isInGraphingState) {
           tempData.length = 0;
           pressureData.length = 0;
           tempSetpointData.length = 0;
           pressureSetpointData.length = 0;
         }
 
-        if (data.machineState == "BREW_STATE") {
+        if (isInGraphingState) {
           if (!isNaN(data.temp)) {
             if(tempData.length >= maxPoints) tempData.shift();
             tempData.push(data.temp);
@@ -304,7 +324,7 @@
           drawGraph('pressureGraph', pressureData, pressureSetpointData, 0, 140, '#3377ff', '#3377ff');
         }
 
-        wasInBrewState = (data.machineState == "BREW_STATE");
+        wasInGraphingState = isInGraphingState;
         currentState = data.machineState;
 
       }).catch(err => console.error('Fetch error:', err));
