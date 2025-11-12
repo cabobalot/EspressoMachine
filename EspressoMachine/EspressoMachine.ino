@@ -31,10 +31,8 @@ static volatile float targetPressureSteam = 25.0f;
 static volatile float currentTemperature = 0;
 static volatile float currentPressure = 0;
 
-static volatile float preinfusePressure = 20;
+static volatile float preinfusePressure = 25;
 static volatile unsigned long preinfuseTime = 10;
-static volatile float preinfusePressure = 20.0f;  // 与Menu.h中的preinfPressurePsi默认值一致
-static volatile unsigned long preinfuseTime = 5;  // 与Menu.h中的preinfTimeSec默认值一致
 
 // Brew模式压力控制：记录brew开始时间，用于切换预浸泡和正常压力
 static volatile unsigned long brewStartTimeMs = 0;
@@ -98,7 +96,7 @@ void uiLoop(void * pvParameters) {
     menu.setCurrentTemperature(currentTemperature - TEMPERATURE_OFFSET);
     menu.setCurrentPressure(currentPressure);
 
-    dataWebPage::update(currentTemperature - TEMPERATURE_OFFSET, currentPressure, targetTemperature, targetPressure, machineState);
+    dataWebPage::update(currentTemperature - TEMPERATURE_OFFSET, currentPressure, targetTemperature, targetPressureBrew, machineState); // TODO use different pressure for steam
     // ===================== Switch handling (level-based, both edges) =====================
     // Active-low hardware switches: LOW = pressed
     bool rawBrew  = !digitalRead(PIN_SWITCH_BREW);

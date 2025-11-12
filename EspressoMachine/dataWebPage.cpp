@@ -7,7 +7,7 @@
 #include "EspressoMachine.h"
 
 // WiFi credentials
-const char* ssid = "Bean-Team-ESP";
+const char* ssid = "Gagginator";
 const char* password = "";
 
 WebServer server(80);
