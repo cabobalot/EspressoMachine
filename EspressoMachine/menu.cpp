@@ -251,13 +251,13 @@ void Menu::setCurrentTemperature(float temp) {
 }
 void Menu::select() {
     if (currentState == MAIN_MENU) {
-        if (listSelection == 0) {
+        if (listSelection == 2) {
             currentState = MODE_PAGE;
             listSelection = 0;
-        } else if (listSelection == 1) {
+        } else if (listSelection == 0) {
             currentState = SETTING_PAGE;
             listSelection = 0;
-        } else if (listSelection == 2) {
+        } else if (listSelection == 1) {
             currentState = PROFILE_PAGE;
             listSelection = 0;
         }
@@ -377,19 +377,18 @@ void Menu::select() {
                 // 退出编辑模式，保存设置
                 saveSettings();
             }
-        } else if (listSelection == 6) { // Default - 清除所有数据并恢复默认设置
-            // 清除NVS中的所有数据
-            if (preferences.begin(NVS_NAMESPACE, false)) {
-                preferences.clear();  // 清除整个命名空间的所有数据
-                preferences.end();
-                Serial.println("All NVS data cleared");
-            }
-            // 恢复默认值
-            resetToDefaults();
-            // 保存默认设置到profile 0
+        } else if (listSelection == 6) { // Default - 只重置当前profile为默认值
+            // 只重置当前profile的值，不影响其他profile
+            brewTemperature = 70;
+            steamTemperature = 140;
+            targetPressurePsiBrew = 40.0f;
+            targetPressurePsiSteam = 25.0f;
+            preinfPressurePsi = 20.0f;
+            preinfTimeSec = 5;
+            // 不改变currentProfileId，保持当前选中的profile
+            // 保存重置后的值到当前profile
             saveSettings();
-            // 保存currentProfileId为0
-            saveCurrentProfileId();
+            Serial.println("Current profile reset to default values");
         } else if (listSelection == 7) { // Back
             // 退出设置页面时，如果还在编辑模式，先保存
             if (isEditingBrewTemperature || isEditingSteamTemperature || 
@@ -423,20 +422,23 @@ void Menu::select() {
             
             // 如果profile不存在，这是第一次选中，需要创建它
             if (!profileExists) {
-                // 先加载default值到内存（但不改变currentProfileId）
-                // 临时保存当前profileId
-                uint8_t oldProfileId = currentProfileId;
-                // 加载default值
-                loadProfile(0);  // 加载default值
-                // 设置currentProfileId为新profile，然后保存
+                // 使用默认值创建新profile
+                brewTemperature = 70;
+                steamTemperature = 140;
+                targetPressurePsiBrew = 40.0f;
+                targetPressurePsiSteam = 25.0f;
+                preinfPressurePsi = 20.0f;
+                preinfTimeSec = 5;
+                // 设置currentProfileId为新profile
                 currentProfileId = profileId;
-                // 保存当前设置到新profile（创建profile）
+                // 保存默认设置到新profile（创建profile）
                 saveProfile(profileId);
                 Serial.print("Profile ");
                 Serial.print(profileId);
-                Serial.println(" created for the first time");
+                Serial.println(" created for the first time with default values");
             } else {
-                // Profile已存在，只是加载它
+                // Profile已存在，加载它
+                currentProfileId = profileId;  // 先设置currentProfileId
                 loadProfile(profileId);
             }
             
@@ -554,23 +556,14 @@ void Menu::showProfilePage() {
             display.setTextColor(SH110X_WHITE);
         }
         
-        // *标识只在第一次选中时产生（表示profile已被创建/保存过）
+        // *标识表示当前选中的profile（currentProfileId）
         if (i >= 0 && i <= 3) {
             uint8_t profileId = i + 1;
             
-            // 检查profile是否存在（是否已被创建/保存过）
-            char key[32];
-            snprintf(key, sizeof(key), "p%d_exists", profileId);
-            bool profileExists = false;
-            if (preferences.begin(NVS_NAMESPACE, true)) {
-                profileExists = preferences.getBool(key, false);
-                preferences.end();
-            }
-            
             display.print(profileMenuItems[i]);
-            // 只有已存在的profile（第一次选中时创建的）才显示*标识
-            if (profileExists) {
-                display.print(" *");  // 标记已创建的档案
+            // 只有当前选中的profile才显示*标识
+            if (currentProfileId == profileId) {
+                display.print(" *");  // 标记当前选中的档案
             }
             display.println();
         } else {
@@ -721,25 +714,52 @@ void Menu::saveSettings() {
     // 保存到当前profile（如果当前是profile 0，则保存到默认设置）
     Serial.print("saveSettings() called, currentProfileId=");
     Serial.println(currentProfileId);
+    Serial.print("Current values to save: brewTemp=");
+    Serial.print(brewTemperature);
+    Serial.print(", steamTemp=");
+    Serial.print(steamTemperature);
+    Serial.print(", brewP=");
+    Serial.print(targetPressurePsiBrew);
+    Serial.print(", steamP=");
+    Serial.print(targetPressurePsiSteam);
+    Serial.print(", preinfP=");
+    Serial.print(preinfPressurePsi);
+    Serial.print(", preinfT=");
+    Serial.println(preinfTimeSec);
     saveProfile(currentProfileId);
+    Serial.println("saveSettings() completed");
 }
 
 void Menu::loadSettings() {
-    // 先加载当前profile ID
+    // 先加载上次使用的profile ID
     loadCurrentProfileId();
     Serial.print("loadSettings() - Loaded currentProfileId: ");
     Serial.println(currentProfileId);
-    // 然后加载对应的profile（如果不存在则使用默认值）
+    
+    // 如果是第一次打开（currentProfileId为0或无效），使用profile 1
+    if (currentProfileId == 0 || currentProfileId > 4) {
+        currentProfileId = 1;
+        Serial.println("First time opening, using profile 1");
+    }
+    
+    // 加载对应的profile（如果不存在则使用默认值）
     loadProfile(currentProfileId);
 }
 
 void Menu::saveProfile(uint8_t profileId) {
+    // profileId必须为1-4，不再使用profile 0
+    if (profileId == 0 || profileId > 4) {
+        Serial.print("Invalid profileId: ");
+        Serial.println(profileId);
+        return;
+    }
+    
     if (!preferences.begin(NVS_NAMESPACE, false)) {
         Serial.println("Failed to open preferences for saving!");
         return;
     }
     
-    // 构建键名：profileId=0时使用默认键名，否则使用"profileX_xxx"
+    // 构建键名：使用"pX_xxx"格式
     char key[32];
     
     Serial.print("Saving to profile ID: ");
@@ -757,108 +777,73 @@ void Menu::saveProfile(uint8_t profileId) {
     Serial.print(", preinfT=");
     Serial.println(preinfTimeSec);
     
-    if (profileId == 0) {
-        // 默认设置
-        bool allSuccess = true;
-        bool result;
-        
-        result = preferences.putUChar("brewTemp", brewTemperature);
-        if (!result) {
-            Serial.println("ERROR: Failed to save brewTemp!");
-            allSuccess = false;
-        }
-        
-        result = preferences.putUChar("steamTemp", steamTemperature);
-        if (!result) {
-            Serial.println("ERROR: Failed to save steamTemp!");
-            allSuccess = false;
-        }
-        
-        result = preferences.putFloat("brewP", targetPressurePsiBrew);
-        if (!result) {
-            Serial.println("ERROR: Failed to save brewP!");
-            allSuccess = false;
-        }
-        
-        result = preferences.putFloat("steamP", targetPressurePsiSteam);
-        if (!result) {
-            Serial.println("ERROR: Failed to save steamP!");
-            allSuccess = false;
-        }
-        
-        result = preferences.putFloat("preinfP", preinfPressurePsi);
-        if (!result) {
-            Serial.println("ERROR: Failed to save preinfP!");
-            allSuccess = false;
-        }
-        
-        result = preferences.putUShort("preinfT", preinfTimeSec);
-        if (!result) {
-            Serial.println("ERROR: Failed to save preinfT!");
-            allSuccess = false;
-        }
-        
-        // 验证数据是否真的写入了（即使返回false，数据可能仍然写入了）
-        Serial.println("Verifying saved data...");
-        bool brewTempOK = preferences.isKey("brewTemp");
-        bool steamTempOK = preferences.isKey("steamTemp");
-        bool brewPOK = preferences.isKey("brewP");
-        bool steamPOK = preferences.isKey("steamP");
-        bool preinfPOK = preferences.isKey("preinfP");
-        bool preinfTOK = preferences.isKey("preinfT");
-        
-        Serial.print("Keys exist: brewTemp=");
-        Serial.print(brewTempOK);
-        Serial.print(", steamTemp=");
-        Serial.print(steamTempOK);
-        Serial.print(", brewP=");
-        Serial.print(brewPOK);
-        Serial.print(", steamP=");
-        Serial.print(steamPOK);
-        Serial.print(", preinfP=");
-        Serial.print(preinfPOK);
-        Serial.print(", preinfT=");
-        Serial.println(preinfTOK);
-        
-        if (allSuccess && brewTempOK && steamTempOK && brewPOK && steamPOK && preinfPOK && preinfTOK) {
-            Serial.println("Settings saved to default profile (profile 0) - VERIFIED");
-        } else if (brewTempOK && steamTempOK && brewPOK && steamPOK && preinfPOK && preinfTOK) {
-            Serial.println("Settings saved to default profile (profile 0) - VERIFIED (despite some false returns)");
-        } else {
-            Serial.println("WARNING: Some values may have failed to save!");
-        }
+    // 保存用户档案（profileId 1-4）
+    bool allSuccess = true;
+    bool result;
+    
+    snprintf(key, sizeof(key), "p%d_brewTemp", profileId);
+    result = preferences.putUChar(key, brewTemperature);
+    if (!result) {
+        Serial.print("ERROR: Failed to save ");
+        Serial.println(key);
+        allSuccess = false;
+    }
+    
+    snprintf(key, sizeof(key), "p%d_steamTemp", profileId);
+    result = preferences.putUChar(key, steamTemperature);
+    if (!result) {
+        Serial.print("ERROR: Failed to save ");
+        Serial.println(key);
+        allSuccess = false;
+    }
+    
+    snprintf(key, sizeof(key), "p%d_brewP", profileId);
+    result = preferences.putFloat(key, targetPressurePsiBrew);
+    if (!result) {
+        Serial.print("ERROR: Failed to save ");
+        Serial.println(key);
+        allSuccess = false;
+    }
+    
+    snprintf(key, sizeof(key), "p%d_steamP", profileId);
+    result = preferences.putFloat(key, targetPressurePsiSteam);
+    if (!result) {
+        Serial.print("ERROR: Failed to save ");
+        Serial.println(key);
+        allSuccess = false;
+    }
+    
+    snprintf(key, sizeof(key), "p%d_preinfP", profileId);
+    result = preferences.putFloat(key, preinfPressurePsi);
+    if (!result) {
+        Serial.print("ERROR: Failed to save ");
+        Serial.println(key);
+        allSuccess = false;
+    }
+    
+    snprintf(key, sizeof(key), "p%d_preinfT", profileId);
+    result = preferences.putUShort(key, preinfTimeSec);
+    if (!result) {
+        Serial.print("ERROR: Failed to save ");
+        Serial.println(key);
+        allSuccess = false;
+    }
+    
+    // 标记档案存在
+    snprintf(key, sizeof(key), "p%d_exists", profileId);
+    result = preferences.putBool(key, true);
+    if (!result) {
+        Serial.print("ERROR: Failed to save ");
+        Serial.println(key);
+        allSuccess = false;
+    }
+    
+    if (allSuccess) {
+        Serial.print("Settings saved to profile ");
+        Serial.println(profileId);
     } else {
-        // 用户档案（profileId 1-9）
-        bool success = true;
-        snprintf(key, sizeof(key), "p%d_brewTemp", profileId);
-        success &= preferences.putUChar(key, brewTemperature);
-        
-        snprintf(key, sizeof(key), "p%d_steamTemp", profileId);
-        success &= preferences.putUChar(key, steamTemperature);
-        
-        snprintf(key, sizeof(key), "p%d_brewP", profileId);
-        success &= preferences.putFloat(key, targetPressurePsiBrew);
-        
-        snprintf(key, sizeof(key), "p%d_steamP", profileId);
-        success &= preferences.putFloat(key, targetPressurePsiSteam);
-        
-        snprintf(key, sizeof(key), "p%d_preinfP", profileId);
-        success &= preferences.putFloat(key, preinfPressurePsi);
-        
-        snprintf(key, sizeof(key), "p%d_preinfT", profileId);
-        success &= preferences.putUShort(key, preinfTimeSec);
-        
-        // 标记档案存在
-        snprintf(key, sizeof(key), "p%d_exists", profileId);
-        success &= preferences.putBool(key, true);
-        
-        if (success) {
-            Serial.print("Settings saved to profile ");
-            Serial.println(profileId);
-        } else {
-            Serial.print("ERROR: Failed to save some values to profile ");
-            Serial.println(profileId);
-        }
+        Serial.print("WARNING: Some values may have failed to save to profile ");
+        Serial.println(profileId);
     }
     
     preferences.end();
@@ -866,6 +851,20 @@ void Menu::saveProfile(uint8_t profileId) {
 }
 
 void Menu::loadProfile(uint8_t profileId) {
+    // profileId必须为1-4，不再使用profile 0
+    if (profileId == 0 || profileId > 4) {
+        Serial.print("Invalid profileId for loading: ");
+        Serial.println(profileId);
+        // 使用默认值
+        brewTemperature = 70;
+        steamTemperature = 140;
+        targetPressurePsiBrew = 40.0f;
+        targetPressurePsiSteam = 25.0f;
+        preinfPressurePsi = 20.0f;
+        preinfTimeSec = 5;
+        return;
+    }
+    
     Serial.print("loadProfile() called with profileId=");
     Serial.println(profileId);
     
@@ -875,138 +874,72 @@ void Menu::loadProfile(uint8_t profileId) {
     }
     
     char key[32];
-    bool hasData = false;
     
-    if (profileId == 0) {
-        // 加载默认设置
-        // 兼容旧数据：如果存在"temp"键，加载为brewTemp
-        if (preferences.isKey("temp")) {
-            brewTemperature = preferences.getUChar("temp", 70);
-            hasData = true;
-            Serial.println("Found old 'temp' key, loading as brewTemp");
-        } else if (preferences.isKey("brewTemp")) {
-            brewTemperature = preferences.getUChar("brewTemp", 70);
-            hasData = true;
-            Serial.print("Loaded brewTemp: ");
-            Serial.println(brewTemperature);
-        }
-        if (preferences.isKey("steamTemp")) {
-            steamTemperature = preferences.getUChar("steamTemp", 140);
-            hasData = true;
-            Serial.print("Loaded steamTemp: ");
-            Serial.println(steamTemperature);
-        }
-        if (preferences.isKey("brewP")) {
-            targetPressurePsiBrew = preferences.getFloat("brewP", 40.0f);
-            hasData = true;
-            Serial.print("Loaded brewP: ");
-            Serial.println(targetPressurePsiBrew);
-        }
-        if (preferences.isKey("steamP")) {
-            targetPressurePsiSteam = preferences.getFloat("steamP", 25.0f);
-            hasData = true;
-            Serial.print("Loaded steamP: ");
-            Serial.println(targetPressurePsiSteam);
-        }
-        if (preferences.isKey("preinfP")) {
-            preinfPressurePsi = preferences.getFloat("preinfP", 20.0f);
-            hasData = true;
-            Serial.print("Loaded preinfP: ");
-            Serial.println(preinfPressurePsi);
-        }
-        if (preferences.isKey("preinfT")) {
-            preinfTimeSec = preferences.getUShort("preinfT", 5);
-            hasData = true;
-            Serial.print("Loaded preinfT: ");
-            Serial.println(preinfTimeSec);
-        }
+    // 加载用户档案（profileId 1-4）
+    snprintf(key, sizeof(key), "p%d_exists", profileId);
+    bool profileExists = preferences.getBool(key, false);
+    
+    if (!profileExists) {
+        // Profile不存在，使用默认值，但保持currentProfileId不变
+        Serial.print("Profile ");
+        Serial.print(profileId);
+        Serial.println(" does not exist, using default values");
         
-        if (hasData) {
-            Serial.println("Settings loaded from default profile (profile 0)");
-        } else {
-            Serial.println("No saved settings found in profile 0, using defaults");
-        }
-    } else {
-        // 加载用户档案
-        snprintf(key, sizeof(key), "p%d_exists", profileId);
-        bool profileExists = preferences.getBool(key, false);
+        // 使用默认值
+        brewTemperature = 70;
+        steamTemperature = 140;
+        targetPressurePsiBrew = 40.0f;
+        targetPressurePsiSteam = 25.0f;
+        preinfPressurePsi = 20.0f;
+        preinfTimeSec = 5;
         
-        if (!profileExists) {
-            // Profile不存在，使用默认值，设置为default（profile 0）
-            Serial.print("Profile ");
-            Serial.print(profileId);
-            Serial.println(" does not exist, loading default values");
-            
-            // 直接加载默认设置的值（不递归调用loadProfile）
-            if (preferences.isKey("temp")) {
-                brewTemperature = preferences.getUChar("temp", 70);
-            } else if (preferences.isKey("brewTemp")) {
-                brewTemperature = preferences.getUChar("brewTemp", 70);
-            }
-            if (preferences.isKey("steamTemp")) {
-                steamTemperature = preferences.getUChar("steamTemp", 140);
-            }
-            if (preferences.isKey("brewP")) {
-                targetPressurePsiBrew = preferences.getFloat("brewP", 40.0f);
-            }
-            if (preferences.isKey("steamP")) {
-                targetPressurePsiSteam = preferences.getFloat("steamP", 25.0f);
-            }
-            if (preferences.isKey("preinfP")) {
-                preinfPressurePsi = preferences.getFloat("preinfP", 20.0f);
-            }
-            if (preferences.isKey("preinfT")) {
-                preinfTimeSec = preferences.getUShort("preinfT", 5);
-            }
-            
-            currentProfileId = 0;  // 设置为default，这样在setting page显示的是default的值
-            preferences.end();
-            return;
-        }
-        
-        // Profile存在，加载其值
-        // 兼容旧数据：如果存在"p%d_temp"键，加载为brewTemp
-        snprintf(key, sizeof(key), "p%d_temp", profileId);
-        if (preferences.isKey(key)) {
-            brewTemperature = preferences.getUChar(key, 70);
-        } else {
-            snprintf(key, sizeof(key), "p%d_brewTemp", profileId);
-            brewTemperature = preferences.getUChar(key, 70);
-        }
-        
-        snprintf(key, sizeof(key), "p%d_steamTemp", profileId);
-        steamTemperature = preferences.getUChar(key, 140);
-        
-        snprintf(key, sizeof(key), "p%d_brewP", profileId);
-        targetPressurePsiBrew = preferences.getFloat(key, 40.0f);
-        
-        snprintf(key, sizeof(key), "p%d_steamP", profileId);
-        targetPressurePsiSteam = preferences.getFloat(key, 25.0f);
-        
-        snprintf(key, sizeof(key), "p%d_preinfP", profileId);
-        preinfPressurePsi = preferences.getFloat(key, 20.0f);
-        
-        snprintf(key, sizeof(key), "p%d_preinfT", profileId);
-        preinfTimeSec = preferences.getUShort(key, 5);
-        
-        currentProfileId = profileId;
-        
-        Serial.print("Settings loaded from profile ");
-        Serial.println(profileId);
+        // 保持currentProfileId不变（这样在setting page显示的是当前profile）
+        preferences.end();
+        return;
     }
+        
+    // Profile存在，加载其值
+    // 兼容旧数据：如果存在"p%d_temp"键，加载为brewTemp
+    snprintf(key, sizeof(key), "p%d_temp", profileId);
+    if (preferences.isKey(key)) {
+        brewTemperature = preferences.getUChar(key, 70);
+    } else {
+        snprintf(key, sizeof(key), "p%d_brewTemp", profileId);
+        brewTemperature = preferences.getUChar(key, 70);
+    }
+    
+    snprintf(key, sizeof(key), "p%d_steamTemp", profileId);
+    steamTemperature = preferences.getUChar(key, 140);
+    
+    snprintf(key, sizeof(key), "p%d_brewP", profileId);
+    targetPressurePsiBrew = preferences.getFloat(key, 40.0f);
+    
+    snprintf(key, sizeof(key), "p%d_steamP", profileId);
+    targetPressurePsiSteam = preferences.getFloat(key, 25.0f);
+    
+    snprintf(key, sizeof(key), "p%d_preinfP", profileId);
+    preinfPressurePsi = preferences.getFloat(key, 20.0f);
+    
+    snprintf(key, sizeof(key), "p%d_preinfT", profileId);
+    preinfTimeSec = preferences.getUShort(key, 5);
+    
+    // 不在这里设置currentProfileId，因为调用者已经设置了
+    
+    Serial.print("Settings loaded from profile ");
+    Serial.println(profileId);
     
     preferences.end();
 }
 
 void Menu::resetToDefaults() {
-    // 恢复所有设置为默认值
+    // 恢复所有设置为默认值（不改变currentProfileId）
     brewTemperature = 70;
     steamTemperature = 140;
     targetPressurePsiBrew = 40.0f;
     targetPressurePsiSteam = 25.0f;
     preinfPressurePsi = 20.0f;
     preinfTimeSec = 5;
-    currentProfileId = 0;  // 重置为默认档案
+    // 不改变currentProfileId，保持当前选中的profile
     
     Serial.println("Settings reset to defaults");
 }

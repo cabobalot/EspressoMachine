@@ -34,7 +34,7 @@ private:
     Adafruit_SH1106G display;
     int8_t listSelection = 0;  // 当前选中的菜单项
     int8_t scrollOffset = 0;   // 滚动偏移量
-    const char* menuItems[MAX_MENU_ITEMS] = {"Mode", "Setting", "Profile"};
+    const char* menuItems[MAX_MENU_ITEMS] = {"Setting", "Profile", "Mode"};
     const char* modeMenuItems[MAX_MODE_ITEMS] = {"Steam", "Brew", "Water", "Back"};
     const char* settingMenuItems[MAX_SETTING_ITEMS] = {"BrewTemp", "SteamTemp", "BrewPressure", "SteamPressure","PreinfPress", "PreinfTime", "Default", "Back"};
     const char* profileMenuItems[MAX_PROFILE_ITEMS] = {"Profile 1", "Profile 2", "Profile 3", "Profile 4", "Back"}; 
