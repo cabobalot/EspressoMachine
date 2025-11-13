@@ -4,9 +4,10 @@
 #include <FS.h>
 #include <WebServer.h>
 #include <LittleFS.h>
+#include "EspressoMachine.h"
 
 // WiFi credentials
-const char* ssid = "Bean-Team-ESP";
+const char* ssid = "Gagginator";
 const char* password = "";
 
 WebServer server(80);

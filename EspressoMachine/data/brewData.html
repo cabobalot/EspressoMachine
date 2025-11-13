@@ -68,11 +68,35 @@
     .legend span {
       margin-right: 20px;
     }
+    .stateIndicator {
+      display: inline-block;
+      padding: 20px 40px;
+      border-radius: 5px;
+      font-weight: bold;
+      margin: 40px 40px 0px 40px;
+    }
+    .stateBrew {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .stateIdle {
+      background-color: #9E9E9E;
+      color: white;
+    }
+    .stateSteam {
+      background-color: #6495ED;
+      color: white;
+    }
+    .stateHotWater {
+      background-color: #FF4433;
+      color: white;
+    }
+
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Sensor Data</h1>
+    <h1>Gagginator Data</h1>
     <table>
       <tr>
         <th>Sensor</th>
@@ -90,6 +114,8 @@
         <td class="setpoint pressSetpoint"><span id="pressureSetpoint">0.0</span> psi</td>
       </tr>
     </table>
+
+    <div id="stateIndicator" class="stateIndicator">IDLE</div>
 
     <h2>Temperature Graph</h2>
     <div class="legend">
@@ -127,11 +153,13 @@
   </div>
 
   <script>
-    const maxPoints = 20;
+    const maxPoints = 60;
     const tempData = [];
     const pressureData = [];
     const tempSetpointData = [];
     const pressureSetpointData = [];
+    let currentState = "";
+    let wasInGraphingState = false;
 
     function drawGraph(svgId, data, setpointData, yMin, yMax, strokeColor, setpointColor) {
       const svg = document.getElementById(svgId);
@@ -140,8 +168,7 @@
       svg.innerHTML = '';
       if(data.length < 2) return;
 
-      // Draw gridlines
-      const gridLines = 5;
+      const gridLines = 10;
       for (let i = 0; i <= gridLines; i++) {
         const y = (i / gridLines) * height;
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -210,7 +237,7 @@
       yMinText.setAttribute('y', height - 5);
       yMinText.setAttribute('font-size', '12');
       yMinText.setAttribute('fill', '#333');
-      yMinText.textContent = yMin.toFixed(1);
+      yMinText.textContent = yMin.toFixed(0);
       svg.appendChild(yMinText);
     
       const yMaxText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -218,38 +245,92 @@
       yMaxText.setAttribute('y', 15);
       yMaxText.setAttribute('font-size', '12');
       yMaxText.setAttribute('fill', '#333');
-      yMaxText.textContent = yMax.toFixed(1);
+      yMaxText.textContent = yMax.toFixed(0);
       svg.appendChild(yMaxText);
+
+      const xMaxTime = 60;
+
+      const xMaxText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      xMaxText.setAttribute('x', width - 5);
+      xMaxText.setAttribute('y', height - 5);
+      xMaxText.setAttribute('font-size', '12'); 
+      xMaxText.setAttribute('fill', '#333');
+      xMaxText.setAttribute('text-anchor', 'end');
+      xMaxText.textContent = xMaxTime.toFixed(0) + 's';
+      svg.appendChild(xMaxText);
     }
 
     function updateData() {
       fetch('/data').then(r => r.json()).then(data => {
         if (!isNaN(data.temp)) {
-          if(tempData.length >= maxPoints) tempData.shift();
-          tempData.push(data.temp);
           document.getElementById('tempValue').textContent = data.temp.toFixed(1);
         }
         if (!isNaN(data.pressure)) {
-          if(pressureData.length >= maxPoints) pressureData.shift();
-          pressureData.push(data.pressure);
           document.getElementById('pressureValue').textContent = data.pressure.toFixed(1);
         }
         if (!isNaN(data.tempSet)) {
-          if(tempSetpointData.length >= maxPoints) tempSetpointData.shift();
-          tempSetpointData.push(data.tempSet);
           document.getElementById('tempSetpoint').textContent = data.tempSet.toFixed(1);
         }
         if (!isNaN(data.pressureSet)) {
-          if(pressureSetpointData.length >= maxPoints) pressureSetpointData.shift();
-          pressureSetpointData.push(data.pressureSet);
           document.getElementById('pressureSetpoint').textContent = data.pressureSet.toFixed(1);
         }
-        drawGraph('tempGraph', tempData, tempSetpointData, 0, 160, '#ff5733', '#ff5733');
-        drawGraph('pressureGraph', pressureData, pressureSetpointData, 0, 140, '#3377ff', '#3377ff');
-      }).catch(err => console.error('Fetch error:', err));
-    }
 
-    setInterval(updateData, 500);
+        const stateIndicator = document.getElementById('stateIndicator');
+        if (data.machineState == "BREW_STATE") {
+          stateIndicator.textContent = "BREWING";
+          stateIndicator.className = "stateIndicator stateBrew";
+        } 
+        else if (data.machineState == "STEAM_STATE") {
+          stateIndicator.textContent = "STEAM";
+          stateIndicator.className = "stateIndicator stateSteam";
+        }
+        else if (data.machineState == "HOT_WATER_STATE") {
+          stateIndicator.textContent = "HOT WATER";
+          stateIndicator.className = "stateIndicator stateHotWater";
+        }
+        else {
+          stateIndicator.textContent = "IDLE";
+          stateIndicator.className = "stateIndicator stateIdle";
+        }
+
+        const isInGraphingState = (data.machineState == "BREW_STATE" || data.machineState == "STEAM_STATE");
+
+        if (wasInGraphingState && !isInGraphingState) {
+          tempData.length = 0;
+          pressureData.length = 0;
+          tempSetpointData.length = 0;
+          pressureSetpointData.length = 0;
+        }
+
+        if (isInGraphingState) {
+          if (!isNaN(data.temp)) {
+            if(tempData.length >= maxPoints) tempData.shift();
+            tempData.push(data.temp);
+          }
+          if (!isNaN(data.pressure)) {
+            if(pressureData.length >= maxPoints) pressureData.shift();
+            pressureData.push(data.pressure);
+          }
+          if (!isNaN(data.tempSet)) {
+            if(tempSetpointData.length >= maxPoints) tempSetpointData.shift();
+            tempSetpointData.push(data.tempSet);
+          }
+          if (!isNaN(data.pressureSet)) {
+            if(pressureSetpointData.length >= maxPoints) pressureSetpointData.shift();
+            pressureSetpointData.push(data.pressureSet);
+          }
+
+          drawGraph('tempGraph', tempData, tempSetpointData, 0, 160, '#ff5733', '#ff5733');
+          drawGraph('pressureGraph', pressureData, pressureSetpointData, 0, 140, '#3377ff', '#3377ff');
+        }
+
+        wasInGraphingState = isInGraphingState;
+        currentState = data.machineState;
+
+      }).catch(err => console.error('Fetch error:', err));
+    } 
+
+    setInterval(updateData, 1000);
     updateData();
   </script>
 </body>

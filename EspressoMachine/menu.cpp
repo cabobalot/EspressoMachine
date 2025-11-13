@@ -5,9 +5,11 @@ Menu menu;
 Menu* Menu::_self = nullptr;
 const char* Menu::NVS_NAMESPACE = "espresso";  // NVS命名空间
 
-Menu::Menu() : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET) {}
+Menu::Menu() : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET, 800000UL, 800000UL) {}
 
 bool Menu::begin() {
+    Wire.begin(PIN_SCREEN_SDA, PIN_SCREEN_SCL);
+    Wire.setClock(800000UL);
     if (!display.begin(0x3C, true)) {
         return false;
     }
@@ -17,11 +19,11 @@ bool Menu::begin() {
 bool Menu::beginInput(int pinA, int pinB, int pinBtn) {
     _self = this;
     _pinA = pinA; _pinB = pinB; _pinBtn = pinBtn;
-
+    
     pinMode(_pinA, INPUT);
     pinMode(_pinB, INPUT);
     pinMode(_pinBtn, INPUT_PULLUP);
-
+    
     attachInterrupt(digitalPinToInterrupt(_pinA), Menu::isrAWrapper, CHANGE);
     return true;
 }
@@ -43,28 +45,28 @@ void Menu::pollInput() {
         _stepAccum += (_encUp ? +1 : -1);
         _encFired = false;
     }
-
+    
     // === 按钮：边沿 + 去抖，只在稳定“抬起->按下”瞬间计一次 ===
     unsigned long now = millis();
     bool rawPressed = !digitalRead(_pinBtn);   // 上拉输入：低电平=按下
-
+    
     // 记录原始读数发生边沿的时刻
     if (rawPressed != _btnPrevRaw) {
         _btnPrevRaw    = rawPressed;
         _btnEdgeTimeMs = now;
     }
-
+    
     // 原始状态稳定超过去抖时间，才更新“稳定状态”
     if ((now - _btnEdgeTimeMs) >= DEBOUNCE_MS ) {
         if (rawPressed != _btnStable) {
             _btnStable = rawPressed;
-
+            
             if (_btnStable) {               // 稳定地从“未按”->“按下”
                 if (!_btnLatched) {         // 未计过数才计数
                     _clicked = true;        // 一次性点击事件（供上层 consumeClick() 读取）
                     _btnLatched = true;     // 锁存，直到松开前不再重复计数
                     _pressCount++;
-
+                    
                     // 可选：串口统计
                     Serial.print("Button press #");
                     Serial.println(_pressCount);
@@ -136,7 +138,7 @@ void Menu::show() {
 
 void Menu::moveSelection(bool up) {
     if (currentState == SETTING_PAGE && isEditingBrewTemperature) {
-            if (up && brewTemperature < 100) brewTemperature++;
+            if (up && brewTemperature < 150) brewTemperature++;
             if (!up && brewTemperature > 30) brewTemperature--;
             // 编辑过程中不保存，只在退出编辑模式时保存
             return;
@@ -177,8 +179,8 @@ void Menu::moveSelection(bool up) {
         // 编辑过程中不保存，只在退出编辑模式时保存
         return;
     }
-
-  //main page
+    
+    //main page
     if (currentState == MAIN_MENU) {
         if (up) {
             if (listSelection > 0) {
@@ -190,7 +192,7 @@ void Menu::moveSelection(bool up) {
             }
         }
     }
-  //mode page
+    //mode page
     else if (currentState == MODE_PAGE) { 
         if (up) {
             if (listSelection > 0) {
@@ -203,7 +205,7 @@ void Menu::moveSelection(bool up) {
         }
     }
     //setting page
-      else if (currentState == SETTING_PAGE) {  
+    else if (currentState == SETTING_PAGE) {  
         if (up) {
             if (listSelection > 0) {
                 listSelection--;
@@ -471,7 +473,7 @@ void Menu::showMainMenu() {
     display.setTextSize(1);
     for (int i = 0; i < MAX_VISIBLE_ITEMS; i++) {
         int itemIndex = scrollOffset + i;  // 计算当前要显示的菜单项索引
-
+        
         if (itemIndex < MAX_MENU_ITEMS) {
             if (itemIndex == listSelection) {
                 display.setTextColor(SH110X_BLACK, SH110X_WHITE);  // 选中项反色显示
@@ -500,7 +502,7 @@ void Menu::showSettingPage() {
     display.setCursor(0, 0);
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
-
+    
     for (int i = 0; i < MAX_SETTING_ITEMS; i++) {
         if (i == listSelection) {
             display.setTextColor(SH110X_BLACK, SH110X_WHITE);  // 反色显示选中项
@@ -582,19 +584,19 @@ void Menu::showSidebarInfo() {
     display.drawLine(70, 0, 70, SCREEN_HEIGHT, SH110X_WHITE);
     display.setCursor(73, 0);
     display.print("Temp");
-
+    
     display.setCursor(73, 10);
     display.print("Tar:");
     display.print(brewTemperature);
     display.println("C");
-
+    
     display.setCursor(73, 20);
     display.print("C:");
     display.print(currentTemperature);
     display.println("C");
-
+    
     display.drawLine(70, 30, SCREEN_WIDTH, 30, SH110X_WHITE);
-
+    
     display.setTextColor(SH110X_WHITE);
     display.setCursor(73, 40);
     display.print("PSI:");
@@ -606,11 +608,11 @@ void Menu::showBrewPage() {
         currentFrame = (currentFrame + 1) % 2;  // 两帧循环切换
         lastFrameTime = now;
     }
-
+    
     const unsigned char* frame = (currentFrame == 0) ? brew_coffee__ : brew_coffee__1;
     // 显示图像（居中）
     display.drawBitmap(0, 0, frame, 58, 64, SH110X_WHITE);
-
+    
     // 倒计时计算
     display.setCursor(70, 0);
     display.setTextSize(1);
@@ -645,15 +647,15 @@ void Menu::showSteamPage() {
         currentFrame = (currentFrame + 1) % 2;
         lastFrameTime = now;
     }
-
+    
     const unsigned char* frame = (currentFrame == 0) ? steam_1 : steam_2;
     display.drawBitmap(0, 0, frame, 58, 64, SH110X_WHITE);
-
+    
     display.setCursor(70, 0);
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
     display.println("STEAM");
-
+    
     uint32_t sec = (now - steamStartTime) / 1000;
     display.setCursor(70, 12);
     display.print("Time: ");

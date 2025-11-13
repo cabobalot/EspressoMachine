@@ -1,9 +1,11 @@
-
-#include "pressure_sensor.h"
 #include <Arduino.h>
 
+#include "pressure_sensor.h"
+#include"pins.h"
+
+
 // Sensor parameters
-const int pressurePin = 36;
+const int pressurePin = PIN_PRESSURE_SENSE;
 const float sensorMinVoltage = 0.5;
 const float sensorMaxVoltage = 4.5;
 

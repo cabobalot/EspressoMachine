@@ -1,17 +1,12 @@
 #ifndef DATAWEBPAGE_H
 #define DATAWEBPAGE_H
 
+#include "EspressoMachine.h"
+
 class dataWebPage {
 private:
 
 public:
-
-  enum MachineState {
-    IDLE_STATE,
-    BREW_STATE,
-    STEAM_STATE,
-    HOT_WATER_STATE
-  };
 
 	static void init();
 
