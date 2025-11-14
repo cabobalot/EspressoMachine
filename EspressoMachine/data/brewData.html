@@ -2,6 +2,8 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Stylization of the Webpage-->
   <style>
     body { 
       font-family: Monaco, monospace; 
@@ -97,6 +99,8 @@
 <body>
   <div class="container">
     <h1>Gagginator Data</h1>
+     
+    <!-- Table containing all the informative brew parameters-->
     <table>
       <tr>
         <th>Sensor</th>
@@ -115,8 +119,10 @@
       </tr>
     </table>
 
+    <!-- Icon to show the current state of the machine-->
     <div id="stateIndicator" class="stateIndicator">IDLE</div>
 
+    <!-- Creates the temeprature graph-->
     <h2>Temperature Graph</h2>
     <div class="legend">
       <span>
@@ -134,6 +140,7 @@
     </div>
     <svg id="tempGraph" width="600" height="350" style="background:#f0f0f0; border:4px solid #987654;"></svg>
 
+    <!-- Creates the pressure graph -->
     <h2>Pressure Graph</h2>
     <div class="legend">
       <span>
@@ -153,7 +160,8 @@
   </div>
 
   <script>
-    const maxPoints = 60;
+    // Parameters and setup for the graphs
+    const maxPoints = 60; // Maximum viewable points in the graphing window
     const tempData = [];
     const pressureData = [];
     const tempSetpointData = [];
@@ -168,7 +176,10 @@
       svg.innerHTML = '';
       if(data.length < 2) return;
 
+      // Adds the gridlines to the graphs
       const gridLines = 10;
+
+      // Builds the graph
       for (let i = 0; i <= gridLines; i++) {
         const y = (i / gridLines) * height;
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -201,6 +212,7 @@
         return x + ',' + y;
       }).join(' ');
 
+      // Creates the line to graph the current values of the brew parameters
       const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
       polyline.setAttribute('fill', 'none');
       polyline.setAttribute('stroke', strokeColor);
@@ -208,6 +220,7 @@
       polyline.setAttribute('points', points);
       svg.appendChild(polyline);
 
+      // Creates the setpoint line for the graphs
       if (setpointData.length >= 2) {
         const setpointPoints = setpointData.map((val, idx) => {
           const x = (idx / (maxPoints - 1)) * width;
@@ -232,6 +245,7 @@
       axis.setAttribute('stroke-width', '1');
       svg.appendChild(axis);
 
+      // Creates the y-axis labels for the graph
       const yMinText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       yMinText.setAttribute('x', 5);
       yMinText.setAttribute('y', height - 5);
@@ -248,8 +262,8 @@
       yMaxText.textContent = yMax.toFixed(0);
       svg.appendChild(yMaxText);
 
+      // Create the x-axis label for the graph
       const xMaxTime = 60;
-
       const xMaxText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       xMaxText.setAttribute('x', width - 5);
       xMaxText.setAttribute('y', height - 5);
@@ -260,7 +274,11 @@
       svg.appendChild(xMaxText);
     }
 
+    /*
+    Handles all the updates to the brew parameters and graphs them
+    */
     function updateData() {
+      // Update the data in the table
       fetch('/data').then(r => r.json()).then(data => {
         if (!isNaN(data.temp)) {
           document.getElementById('tempValue').textContent = data.temp.toFixed(1);
@@ -275,6 +293,7 @@
           document.getElementById('pressureSetpoint').textContent = data.pressureSet.toFixed(1);
         }
 
+        // Updates the state icon according to the state we are in
         const stateIndicator = document.getElementById('stateIndicator');
         if (data.machineState == "BREW_STATE") {
           stateIndicator.textContent = "BREWING";
@@ -293,15 +312,18 @@
           stateIndicator.className = "stateIndicator stateIdle";
         }
 
+        // Checks for if we are in the graphing state
         const isInGraphingState = (data.machineState == "BREW_STATE" || data.machineState == "STEAM_STATE");
 
+        // Clear the graph when we re-enter brew or steam state
         if (wasInGraphingState && !isInGraphingState) {
           tempData.length = 0;
           pressureData.length = 0;
           tempSetpointData.length = 0;
           pressureSetpointData.length = 0;
         }
-
+        
+        // Only update data on the graph if it is in steam or brew mode
         if (isInGraphingState) {
           if (!isNaN(data.temp)) {
             if(tempData.length >= maxPoints) tempData.shift();
@@ -324,12 +346,14 @@
           drawGraph('pressureGraph', pressureData, pressureSetpointData, 0, 140, '#3377ff', '#3377ff');
         }
 
+        // Updates the states
         wasInGraphingState = isInGraphingState;
         currentState = data.machineState;
 
       }).catch(err => console.error('Fetch error:', err));
     } 
 
+    // Updates the data on the webpage every second
     setInterval(updateData, 1000);
     updateData();
   </script>

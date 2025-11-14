@@ -1,7 +1,7 @@
 #ifndef PINS_H
 #define PINS_H
 
-#define PIN_TEMP_SENS_SCK 18
+#define PIN_TEMP_SENS_SCK 18 
 #define PIN_TEMP_SENS_CS  5
 #define PIN_TEMP_SENS_SO  19
 
@@ -22,7 +22,5 @@
 
 #define PIN_SWITCH_BREW  27
 #define PIN_SWITCH_STEAM 13
-
-
 
 #endif

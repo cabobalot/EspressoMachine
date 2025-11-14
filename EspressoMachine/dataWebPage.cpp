@@ -10,15 +10,19 @@
 const char* ssid = "Gagginator";
 const char* password = "";
 
+// Hosts the server
 WebServer server(80);
 
+// Initializes the variables to be updated
 String temperatureValue = "0.0";
 String pressureValue = "0.0";
 String temperatureSetpoint = "0.0";
 String pressureSetpoint = "0.0";
 String machineState = "";
 
-
+/*
+ Sets up the webpage to be hosted locally, and readies to take in input
+ */
 void dataWebPage::init() {
   Serial.begin(115200);
   
@@ -29,23 +33,24 @@ void dataWebPage::init() {
     Serial.println("An error occured for LittleFS");
     return;
   }
-
+  
+  // Load required HTML from flash memory
   server.on("/", HTTP_GET, []() {
     File file = LittleFS.open("/brewData.html", "r");
 
-    // error check
+    // Error check
     if (!file) {
       server.send(404, "text/plain", "File not found");
       return;
     }
     
-    // stream the page
+    // Stream the page
     server.streamFile(file, "text/html");
     file.close();
   });
 
   server.on("/data", HTTP_GET, []() {
-    // send data as JSON
+    // Send data as JSON
     String json = "{";
     json += "\"temp\":" + temperatureValue + ",";
     json += "\"pressure\":" + pressureValue + ",";
@@ -60,6 +65,9 @@ void dataWebPage::init() {
   server.begin();
 }
 
+/*
+Takes in the information and converts into information to be sent as JSON
+*/
 void dataWebPage::update(float temp, float pressure, float tempSetPoint, float pressureSetPoint, MachineState state){
   
   // parse floats into strings
@@ -68,6 +76,7 @@ void dataWebPage::update(float temp, float pressure, float tempSetPoint, float p
     temperatureSetpoint = String(tempSetPoint, 1);
     pressureSetpoint = String(pressureSetPoint, 1);
 
+  // Parses the states into strings
     switch (state) {
       case BREW_STATE:
         machineState = String("BREW_STATE");
@@ -82,7 +91,7 @@ void dataWebPage::update(float temp, float pressure, float tempSetPoint, float p
         machineState = String("HOT_WATER_STATE");
         break;
       default:
-        machineState = ""; 
+        machineState = "";  // Should never happen
         break;
     }
 
