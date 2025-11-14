@@ -105,7 +105,6 @@ void uiLoop(void * pvParameters) {
     menu.setCurrentTemperature(currentTemperature - TEMPERATURE_OFFSET);
     menu.setCurrentPressure(currentPressure);
 
-    dataWebPage::update(currentTemperature - TEMPERATURE_OFFSET, currentPressure, targetTemperature, targetPressureBrew, machineState); // TODO use different pressure for steam
     // ===================== Switch handling (level-based, both edges) =====================
     // Active-low hardware switches: LOW = pressed
     bool rawBrew  = !digitalRead(PIN_SWITCH_BREW);
@@ -223,6 +222,7 @@ void mainLoop(void * pvParameters) {
 
     tempControl::update();
 
+    dataWebPage::update(currentTemperature - TEMPERATURE_OFFSET, currentPressure, targetTemperature, currentTargetPressure, machineState);
     
     static unsigned long timeLastPrint = 0;
     if (millis() - timeLastPrint >= 1000) {
