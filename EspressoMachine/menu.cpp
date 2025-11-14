@@ -79,6 +79,9 @@ void Menu::pollInput() {
 }
 
 int Menu::consumeStep() {
+    if (abs(_stepAccum) < 2) { // new encoder outputs two steps per step 
+        return 0;
+    }
     int s = _stepAccum;
     _stepAccum = 0;
     return s;
