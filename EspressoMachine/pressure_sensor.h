@@ -19,8 +19,14 @@ extern const float voltageDividerRatio;
 // Averaging constant
 extern const int numReadings;
 
-// Function declarations
+/*
+Handles the calculations to read from the sensor
+*/
 int calculatePressure();
+
+/*
+Debugging code to check if data received is correct
+*/
 void printAvgData(float avgSensorValue, float avgPsi, float avgBar, float avgVoltage);
 
 #endif // PRESSURE_SENSOR_H

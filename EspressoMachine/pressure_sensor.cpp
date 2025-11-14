@@ -1,8 +1,6 @@
 #include <Arduino.h>
-
 #include "pressure_sensor.h"
 #include"pins.h"
-
 
 // Sensor parameters
 const int pressurePin = PIN_PRESSURE_SENSE;
@@ -12,7 +10,7 @@ const float sensorMaxVoltage = 4.5;
 const float pressureMin = 0.0;
 const float mPaMax = 1.2;
 
-// ESP parameters
+// ESP32 specific parameters
 const float maxVoltage = 3.3;
 const float adcResolution = 4095.0; // 12 bit resolution (0-3.3V)
 
@@ -22,22 +20,23 @@ const float voltageDividerRatio = 1.515;
 // Averaging constant
 static const uint8_t NUM_READINGS = 20;
 static uint16_t ringBuf[NUM_READINGS];  // ~40B
-static uint8_t  head = 0;               // 下一个要写入的位置
-static uint8_t  count = 0;              // 当前已有样本数 (<= NUM_READINGS)
-static uint32_t sumAdc = 0;
-             // 运行和，防溢出用32位
+static uint8_t  head = 0;               // Next location to write to
+static uint8_t  count = 0;              // Current number of samples (<= NUM_READINGS)
+static uint32_t sumAdc = 0;             // Run and prevent overflow
+
+/*
+Averages the pressure readings coming in from the sensor
+*/
 static inline uint16_t readAveragedAdc() {
   uint16_t newv = (uint16_t)analogRead(pressurePin);
-    //Serial.print("RawData: ");
-    //Serial.println(newv);
   if (count < NUM_READINGS) {
-    // 缓冲未满：直接累加
+    // Buffer not full, accumulate directly
     sumAdc += newv;
     ringBuf[head++] = newv;
     count++;
     if (head == NUM_READINGS) head = 0;
   } else {
-    // 缓冲已满：弹出最旧值，加入新值
+    // Buffer full, pop the old value, add the new one in
     uint16_t oldv = ringBuf[head];
     sumAdc += newv;
     sumAdc -= oldv;
@@ -46,11 +45,15 @@ static inline uint16_t readAveragedAdc() {
     if (head == NUM_READINGS) head = 0;
   }
 
-  // 计算当前平均（四舍五入）
+  // Calculate the current average (rounded)
   uint32_t denom = (count == 0) ? 1 : count;
   uint16_t avg = (uint16_t)((sumAdc + denom / 2) / denom);
   return avg;
 }
+
+/*
+Handles the calculations to take voltage sensor readings into a pressure format.
+*/
 int calculatePressure() {
   int i = 0;
   int rawTotalValue = 0;
@@ -61,7 +64,7 @@ int calculatePressure() {
 
   const unsigned long now = millis();
 
-  //update every 3ms
+  // update every 3ms
   if (now - prevMs_ >= 3) {
     prevMs_ = now;
 
@@ -78,26 +81,26 @@ int calculatePressure() {
     
     float pressure = ((actualVoltage - sensorMinVoltage) * pressureRange / voltageRange) + pressureMin; // in mPa
     
-    // Ensure pressure is within expected range (for sanity checking)
+    // Ensure pressure is within expected range (sanity check)
     pressure = constrain(pressure, pressureMin, mPaMax);
 
     // Conversion to bar and PSI
     bar = pressure * 10;
     psi = pressure * 145.038;
   }
-  
-  // printAvgData(avgValue, psi, bar, measuredVoltage);
-  return psi;
+  return psi; // PSI is default, but mPa or bar is valid.
 }
 
 const int printToPlotter = 0; // 1 to plot, 0 to print metadata
 
-// To print to Serial Monitor and Plotter
+/*
+Prints data either to a serial plotter or directly into the console
+*/
 void printAvgData(float avgSensorValue, float avgPsi, float avgBar, float avgVoltage) {
   if (printToPlotter) {
     Serial.println(avgPsi); // fill with desired measurement
   }
-  else {
+  else { // Print to console
     Serial.print("Raw ADC: ");
     Serial.println(avgSensorValue);
     Serial.print("Measured Voltage: ");
