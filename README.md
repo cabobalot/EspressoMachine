@@ -1,5 +1,6 @@
 ![Project Status](https://img.shields.io/badge/status-active-success.svg)
 ![License](https://img.shields.io/badge/license-open%20source-blue.svg)
+
 Gagginator - A Modified Gaggia Classic Machine
 ==============================================
 
