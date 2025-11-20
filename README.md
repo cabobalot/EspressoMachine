@@ -67,11 +67,7 @@ gagginator/
 │   ├── tempControl.cpp    
 │   ├── tempControl.h     
 │   └── timingTestDebug.h       
-├── Gaggia Schematic/           
-├── OLEDMenu/                  
-├── PSM/                         
-├── Sensor Code/                
-└── Tests/                       
+├── Gaggia Schematic/                                  
 ```
 
 
@@ -106,22 +102,6 @@ Simply copy all of the files from this folder into your project.
 #### Gaggia Schematic
 
 The circuit diagram for wiring the hardware components for the Gagginator.
-
-#### OLEDMenu
-
-Contains the original code for the menu
-
-#### PSM
-
-The original code for the PSM 
-
-#### Sensor Code
-
-Original code for the sensors 
-
-#### Tests
-
-Contains some of the original tests used to assemble the final code.
 
 Installation 
 ---------------
