@@ -96,6 +96,21 @@ bool Menu::consumeClick() {
 //press the button to change state
 void Menu::setState(MenuState s) {
     currentState = s;
+    
+    // 重置 listSelection 和 scrollOffset，避免跨页面状态残留
+    if (s == MAIN_MENU) {
+        listSelection = 0;
+        scrollOffset = 0;
+    } else if (s == SETTING_PAGE || s == MODE_PAGE || s == PROFILE_PAGE) {
+        // 这些页面使用 listSelection，重置为0
+        listSelection = 0;
+        scrollOffset = 0;
+    } else {
+        // STEAM_PAGE, BREW_PAGE, WATER_PAGE 不使用 listSelection，但也重置为0以防万一
+        listSelection = 0;
+        scrollOffset = 0;
+    }
+    
     if (s == STEAM_PAGE) {
         steamStartTime = millis();
         lastFrameTime = 0;
@@ -161,10 +176,10 @@ void Menu::moveSelection(bool up) {
         // 编辑过程中不保存，只在退出编辑模式时保存
         return;
     }
-    // Editing Steam Pressure
-    if (currentState == SETTING_PAGE && isEditingPressureSteam) {
-        if (up  && targetPressurePsiSteam < 150.0f) targetPressurePsiSteam += 1.0f;
-        if (!up && targetPressurePsiSteam >  0.0f)  targetPressurePsiSteam -= 1.0f;
+    // Editing Steam Percentage
+    if (currentState == SETTING_PAGE && isEditingSteamPercentage) {
+        if (up  && steamPercentage < 128) steamPercentage += 1;
+        if (!up && steamPercentage > 1)   steamPercentage -= 1;
         // 编辑过程中不保存，只在退出编辑模式时保存
         return;
     }
@@ -272,13 +287,13 @@ void Menu::select() {
             if (isEditingBrewTemperature) {
                 // 进入编辑模式，先保存之前可能正在编辑的其他项
                 if (isEditingSteamTemperature || isEditingPressureBrew || 
-                    isEditingPressureSteam || isEditingPreinfPressure || 
+                    isEditingSteamPercentage || isEditingPreinfPressure || 
                     isEditingPreinfTime) {
                     saveSettings();
                 }
                 isEditingSteamTemperature = false;
                 isEditingPressureBrew  = false;
-                isEditingPressureSteam = false;
+                isEditingSteamPercentage = false;
                 isEditingPreinfPressure = false;
                 isEditingPreinfTime     = false;
             } else if (wasEditing) {
@@ -291,13 +306,13 @@ void Menu::select() {
             if (isEditingSteamTemperature) {
                 // 进入编辑模式，先保存之前可能正在编辑的其他项
                 if (isEditingBrewTemperature || isEditingPressureBrew || 
-                    isEditingPressureSteam || isEditingPreinfPressure || 
+                    isEditingSteamPercentage || isEditingPreinfPressure || 
                     isEditingPreinfTime) {
                     saveSettings();
                 }
                 isEditingBrewTemperature = false;
                 isEditingPressureBrew  = false;
-                isEditingPressureSteam = false;
+                isEditingSteamPercentage = false;
                 isEditingPreinfPressure = false;
                 isEditingPreinfTime     = false;
             } else if (wasEditing) {
@@ -310,23 +325,23 @@ void Menu::select() {
             if (isEditingPressureBrew) {
                 // 进入编辑模式，先保存之前可能正在编辑的其他项
                 if (isEditingBrewTemperature || isEditingSteamTemperature || 
-                    isEditingPressureSteam || isEditingPreinfPressure || 
+                    isEditingSteamPercentage || isEditingPreinfPressure || 
                     isEditingPreinfTime) {
                     saveSettings();
                 }
                 isEditingBrewTemperature = false;
                 isEditingSteamTemperature = false;
-                isEditingPressureSteam  = false;
+                isEditingSteamPercentage  = false;
                 isEditingPreinfPressure = false;
                 isEditingPreinfTime     = false;
             } else if (wasEditing) {
                 // 退出编辑模式，保存设置
                 saveSettings();
             }
-        } else if (listSelection == 3) { // SteamPressure
-            bool wasEditing = isEditingPressureSteam;
-            isEditingPressureSteam = !isEditingPressureSteam;
-            if (isEditingPressureSteam) {
+        } else if (listSelection == 3) { // SteamPercentage
+            bool wasEditing = isEditingSteamPercentage;
+            isEditingSteamPercentage = !isEditingSteamPercentage;
+            if (isEditingSteamPercentage) {
                 // 进入编辑模式，先保存之前可能正在编辑的其他项
                 if (isEditingBrewTemperature || isEditingSteamTemperature || 
                     isEditingPressureBrew || isEditingPreinfPressure || 
@@ -348,14 +363,14 @@ void Menu::select() {
             if (isEditingPreinfPressure) {
                 // 进入编辑模式，先保存之前可能正在编辑的其他项
                 if (isEditingBrewTemperature || isEditingSteamTemperature || 
-                    isEditingPressureBrew || isEditingPressureSteam || 
+                    isEditingPressureBrew || isEditingSteamPercentage || 
                     isEditingPreinfTime) {
                     saveSettings();
                 }
                 isEditingBrewTemperature = false;
                 isEditingSteamTemperature = false;
                 isEditingPressureBrew   = false;
-                isEditingPressureSteam  = false;
+                isEditingSteamPercentage  = false;
                 isEditingPreinfTime     = false;
             } else if (wasEditing) {
                 // 退出编辑模式，保存设置
@@ -367,14 +382,14 @@ void Menu::select() {
             if (isEditingPreinfTime) {
                 // 进入编辑模式，先保存之前可能正在编辑的其他项
                 if (isEditingBrewTemperature || isEditingSteamTemperature || 
-                    isEditingPressureBrew || isEditingPressureSteam || 
+                    isEditingPressureBrew || isEditingSteamPercentage || 
                     isEditingPreinfPressure) {
                     saveSettings();
                 }
                 isEditingBrewTemperature = false;
                 isEditingSteamTemperature = false;
                 isEditingPressureBrew   = false;
-                isEditingPressureSteam  = false;
+                isEditingSteamPercentage  = false;
                 isEditingPreinfPressure = false;
             } else if (wasEditing) {
                 // 退出编辑模式，保存设置
@@ -385,7 +400,7 @@ void Menu::select() {
             brewTemperature = 70;
             steamTemperature = 140;
             targetPressurePsiBrew = 40.0f;
-            targetPressurePsiSteam = 25.0f;
+            steamPercentage = 64;  // 默认50%
             preinfPressurePsi = 20.0f;
             preinfTimeSec = 5;
             // 不改变currentProfileId，保持当前选中的profile
@@ -395,7 +410,7 @@ void Menu::select() {
         } else if (listSelection == 7) { // Back
             // 退出设置页面时，如果还在编辑模式，先保存
             if (isEditingBrewTemperature || isEditingSteamTemperature || 
-                isEditingPressureBrew || isEditingPressureSteam || 
+                isEditingPressureBrew || isEditingSteamPercentage || 
                 isEditingPreinfPressure || isEditingPreinfTime) {
                 saveSettings();
             }
@@ -403,7 +418,7 @@ void Menu::select() {
             isEditingBrewTemperature = false;
             isEditingSteamTemperature = false;
             isEditingPressureBrew   = false;
-            isEditingPressureSteam  = false;
+            isEditingSteamPercentage  = false;
             isEditingPreinfPressure = false;
             isEditingPreinfTime     = false;
             listSelection = 0;
@@ -425,13 +440,13 @@ void Menu::select() {
             
             // 如果profile不存在，这是第一次选中，需要创建它
             if (!profileExists) {
-                // 使用默认值创建新profile
-                brewTemperature = 70;
-                steamTemperature = 140;
-                targetPressurePsiBrew = 40.0f;
-                targetPressurePsiSteam = 25.0f;
-                preinfPressurePsi = 20.0f;
-                preinfTimeSec = 5;
+            // 使用默认值创建新profile
+            brewTemperature = 70;
+            steamTemperature = 140;
+            targetPressurePsiBrew = 40.0f;
+            steamPercentage = 64;  // 默认50%
+            preinfPressurePsi = 20.0f;
+            preinfTimeSec = 5;
                 // 设置currentProfileId为新profile
                 currentProfileId = profileId;
                 // 保存默认设置到新profile（创建profile）
@@ -527,10 +542,10 @@ void Menu::showSettingPage() {
             display.print("BrewP: ");
             display.print(targetPressurePsiBrew, 0); //decimal
             display.println(" P");
-        } else if (i == 3) {       // SteamPressure
-            display.print("SteamP: ");
-            display.print(targetPressurePsiSteam, 0);
-            display.println(" P");
+        } else if (i == 3) {       // SteamPercentage
+            display.print("Steam%: ");
+            display.print(steamPercentage);
+            display.println("%");
         } else if (i == 4) {  // PreinfPress
             display.print("PreP: ");
             display.print(preinfPressurePsi, 1);
@@ -663,13 +678,13 @@ void Menu::showSteamPage() {
     display.print(steamTemperature);
     display.println("C");
 
-    display.setCursor(60, 36);
-    display.print("Cur: ");
+    display.setCursor(57, 36);
+    display.print("CurT:");
     display.print(currentTemperature);
     display.println("C");
 
-    display.setCursor(60, 48);
-    display.print("Cur :");
+    display.setCursor(57, 48);
+    display.print("CurP:");
     display.print(currentPressurePsi);
     display.println("P");
 }
@@ -723,8 +738,8 @@ void Menu::saveSettings() {
     Serial.print(steamTemperature);
     Serial.print(", brewP=");
     Serial.print(targetPressurePsiBrew);
-    Serial.print(", steamP=");
-    Serial.print(targetPressurePsiSteam);
+    Serial.print(", steam%=");
+    Serial.print(steamPercentage);
     Serial.print(", preinfP=");
     Serial.print(preinfPressurePsi);
     Serial.print(", preinfT=");
@@ -773,8 +788,8 @@ void Menu::saveProfile(uint8_t profileId) {
     Serial.print(steamTemperature);
     Serial.print(", brewP=");
     Serial.print(targetPressurePsiBrew);
-    Serial.print(", steamP=");
-    Serial.print(targetPressurePsiSteam);
+    Serial.print(", steam%=");
+    Serial.print(steamPercentage);
     Serial.print(", preinfP=");
     Serial.print(preinfPressurePsi);
     Serial.print(", preinfT=");
@@ -808,8 +823,8 @@ void Menu::saveProfile(uint8_t profileId) {
         allSuccess = false;
     }
     
-    snprintf(key, sizeof(key), "p%d_steamP", profileId);
-    result = preferences.putFloat(key, targetPressurePsiSteam);
+    snprintf(key, sizeof(key), "p%d_steamPct", profileId);
+    result = preferences.putUChar(key, steamPercentage);
     if (!result) {
         Serial.print("ERROR: Failed to save ");
         Serial.println(key);
@@ -862,7 +877,7 @@ void Menu::loadProfile(uint8_t profileId) {
         brewTemperature = 70;
         steamTemperature = 140;
         targetPressurePsiBrew = 40.0f;
-        targetPressurePsiSteam = 25.0f;
+        steamPercentage = 64;  // 默认50%
         preinfPressurePsi = 20.0f;
         preinfTimeSec = 5;
         return;
@@ -892,7 +907,7 @@ void Menu::loadProfile(uint8_t profileId) {
         brewTemperature = 70;
         steamTemperature = 140;
         targetPressurePsiBrew = 40.0f;
-        targetPressurePsiSteam = 25.0f;
+        steamPercentage = 64;  // 默认50%
         preinfPressurePsi = 20.0f;
         preinfTimeSec = 5;
         
@@ -917,8 +932,24 @@ void Menu::loadProfile(uint8_t profileId) {
     snprintf(key, sizeof(key), "p%d_brewP", profileId);
     targetPressurePsiBrew = preferences.getFloat(key, 40.0f);
     
+    // 兼容旧数据：如果存在"p%d_steamP"键（PSI值），转换为百分比；否则加载新的百分比值
     snprintf(key, sizeof(key), "p%d_steamP", profileId);
-    targetPressurePsiSteam = preferences.getFloat(key, 25.0f);
+    if (preferences.isKey(key)) {
+        // 旧数据：PSI值，转换为百分比（简单映射：25 PSI -> 64 (50%)）
+        float oldSteamP = preferences.getFloat(key, 25.0f);
+        steamPercentage = (uint8_t)((oldSteamP / 25.0f) * 64.0f);  // 简单转换
+        if (steamPercentage < 1) steamPercentage = 1;
+        if (steamPercentage > 128) steamPercentage = 128;
+        Serial.print("Migrated old steamP value ");
+        Serial.print(oldSteamP);
+        Serial.print(" to percentage ");
+        Serial.println(steamPercentage);
+    } else {
+        snprintf(key, sizeof(key), "p%d_steamPct", profileId);
+        steamPercentage = preferences.getUChar(key, 64);  // 默认50%
+        if (steamPercentage < 1) steamPercentage = 1;
+        if (steamPercentage > 128) steamPercentage = 128;
+    }
     
     snprintf(key, sizeof(key), "p%d_preinfP", profileId);
     preinfPressurePsi = preferences.getFloat(key, 20.0f);
@@ -939,7 +970,7 @@ void Menu::resetToDefaults() {
     brewTemperature = 70;
     steamTemperature = 140;
     targetPressurePsiBrew = 40.0f;
-    targetPressurePsiSteam = 25.0f;
+    steamPercentage = 2;  // 默认50%
     preinfPressurePsi = 20.0f;
     preinfTimeSec = 5;
     // 不改变currentProfileId，保持当前选中的profile

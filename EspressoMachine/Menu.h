@@ -46,14 +46,14 @@ private:
     float currentPressurePsi = 0.0;
     //Default Value
     float targetPressurePsiBrew  = 40.0f;  // Default for brew pressure
-    float targetPressurePsiSteam = 25.0f;  // Default for steam pressure
+    uint8_t steamPercentage = 3;  // Default for steam percentage (1-128), 默认50%
     float   preinfPressurePsi = 20.0f;   // default 20 PSI
     uint16_t preinfTimeSec    = 5;      // default 5
     bool isEditingPreinfPressure = false;
     bool isEditingPreinfTime     = false;
     //Editing pressure
     bool  isEditingPressureBrew  = false;
-    bool  isEditingPressureSteam = false;
+    bool  isEditingSteamPercentage = false;
     bool isEditingBrewTemperature = false;
     bool isEditingSteamTemperature = false;
     //count for brew screen
@@ -86,11 +86,12 @@ public:
     void setTargetTemperatureSteam(uint8_t temp) { steamTemperature = temp; }
     //pressure
     void setCurrentPressure(float psi);
-    // Brew & Steam target pressure
+    // Brew target pressure
     void  setTargetPressureBrew(float psi)  { targetPressurePsiBrew  = psi; }
-    void  setTargetPressureSteam(float psi) { targetPressurePsiSteam = psi; }
     float getTargetPressureBrew() const     { return targetPressurePsiBrew; }
-    float getTargetPressureSteam() const    { return targetPressurePsiSteam; }
+    // Steam percentage (1-128)
+    void  setSteamPercentage(uint8_t pct)   { steamPercentage = pct; }
+    uint8_t getSteamPercentage() const       { return steamPercentage; }
     //Encoder Function
     bool beginInput(int pinA, int pinB, int pinBtn);
     void pollInput();

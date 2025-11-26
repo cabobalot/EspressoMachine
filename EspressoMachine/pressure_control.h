@@ -11,12 +11,13 @@ class PressureControl {
 public:
   // 执行端与 PID 的基本参数
   static constexpr uint32_t kCtrlMs   = 17;     // 控制周期 50ms
-  static constexpr uint16_t kPsmRange = 127;    // PSM 档位（按你的 psm 实现改）
+  static constexpr uint16_t kPsmRange = 128;    // PSM 档位（1-128）
 
   PressureControl(double kp, double ki, double kd);
 
   void init(uint8_t controlPin, uint8_t zeroCrossPin);   // 初始化：PID + PSM
   void setSetpoint(double psi);
+  void setPercentage(uint8_t percentage);  // 设置百分比模式（1-128），用于steam模式
   
   void setAlwaysOn();
   void setAlwaysOff();
@@ -38,6 +39,10 @@ private:
 
   // 调度
   unsigned long prevMs_ = 0;
+
+  // 百分比模式（用于steam模式）
+  bool isPercentageMode_ = false;
+  uint8_t steamPercentage_ = 0;  // 1-128
 
 
   // 把 0..100% 映射到 PSM 档位（0..kPsmRange）

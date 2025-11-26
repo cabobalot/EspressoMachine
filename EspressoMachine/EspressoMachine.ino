@@ -27,7 +27,7 @@ void screenShowLoop(void * pvParameters);
 
 static volatile float targetTemperature = 95;
 static volatile float targetPressureBrew  = 120.0f;
-static volatile float targetPressureSteam = 25.0f;
+static volatile uint8_t steamPercentage = 64;  // 1-128, 默认50%
 static volatile float currentTemperature = 0;
 static volatile float currentPressure = 0;
 
@@ -97,7 +97,7 @@ void uiLoop(void * pvParameters) {
       targetTemperature = menu.getTargetTemperatureBrew() + TEMPERATURE_OFFSET;
     }
     targetPressureBrew  = menu.getTargetPressureBrew();
-    targetPressureSteam = menu.getTargetPressureSteam();
+    steamPercentage = menu.getSteamPercentage();
     preinfusePressure   = menu.getPreinfPressure(); 
     preinfuseTime       = menu.getPreinfTimeSec();
 
@@ -203,9 +203,11 @@ void mainLoop(void * pvParameters) {
       }
       break;
     case STEAM_STATE:
-      currentTargetPressure = targetPressureSteam;
-      pc.setSetpoint(targetPressureSteam);
+      // Steam模式使用百分比直接控制，不使用PID
+      pc.setPercentage(steamPercentage);
       digitalWrite(PIN_SOLENOID, LOW);
+      // currentTargetPressure 用于显示，可以设置为百分比对应的值（可选）
+      currentTargetPressure = (float)steamPercentage;  // 显示百分比值
       break;
     case HOT_WATER_STATE:
       pc.setAlwaysOn();
