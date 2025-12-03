@@ -876,7 +876,7 @@ void Menu::loadProfile(uint8_t profileId) {
         brewTemperature = 70;
         steamTemperature = 140;
         targetPressurePsiBrew = 40.0f;
-        steamPercentage = 64;  // Default 50%
+        steamPercentage = 2;  // Default ~2%
         preinfPressurePsi = 20.0f;
         preinfTimeSec = 5;
         return;
@@ -906,7 +906,7 @@ void Menu::loadProfile(uint8_t profileId) {
         brewTemperature = 70;
         steamTemperature = 140;
         targetPressurePsiBrew = 40.0f;
-        steamPercentage = 64;  // Default 50%
+        steamPercentage = 2;  // Default ~2%
         preinfPressurePsi = 20.0f;
         preinfTimeSec = 5;
         
@@ -931,24 +931,26 @@ void Menu::loadProfile(uint8_t profileId) {
     snprintf(key, sizeof(key), "p%d_brewP", profileId);
     targetPressurePsiBrew = preferences.getFloat(key, 40.0f);
     
-    // Backward compatibility: if "p%d_steamP" key exists (PSI value), convert to percentage; otherwise load new percentage value
-    snprintf(key, sizeof(key), "p%d_steamP", profileId);
-    if (preferences.isKey(key)) {
-        // Old data: PSI value, convert to percentage (simple mapping: 25 PSI -> 64 (50%))
-        float oldSteamP = preferences.getFloat(key, 25.0f);
-        steamPercentage = (uint8_t)((oldSteamP / 25.0f) * 64.0f);  // Simple conversion
-        if (steamPercentage < 1) steamPercentage = 1;
-        if (steamPercentage > 128) steamPercentage = 128;
-        Serial.print("Migrated old steamP value ");
-        Serial.print(oldSteamP);
-        Serial.print(" to percentage ");
-        Serial.println(steamPercentage);
-    } else {
+
+    // // Backward compatibility: if "p%d_steamP" key exists (PSI value), convert to percentage; otherwise load new percentage value
+    // snprintf(key, sizeof(key), "p%d_steamP", profileId);
+    // if (preferences.isKey(key)) {
+    //     // Old data: PSI value, convert to percentage (simple mapping: 25 PSI -> 64 (50%))
+    //     float oldSteamP = preferences.getFloat(key, 25.0f);
+    //     preferences.remove(key);  // Remove old key after migration // this didnt work for some reason?
+    //     steamPercentage = (uint8_t)((oldSteamP / 25.0f) * 64.0f);  // Simple conversion
+    //     if (steamPercentage < 1) steamPercentage = 1;
+    //     if (steamPercentage > 128) steamPercentage = 128;
+    //     Serial.print("Migrated old steamP value ");
+    //     Serial.print(oldSteamP);
+    //     Serial.print(" to percentage ");
+    //     Serial.println(steamPercentage);
+    // } else {
         snprintf(key, sizeof(key), "p%d_steamPct", profileId);
         steamPercentage = preferences.getUChar(key, 2);  // Default 2%
         if (steamPercentage < 1) steamPercentage = 1;
         if (steamPercentage > 128) steamPercentage = 128;
-    }
+    // }
     
     snprintf(key, sizeof(key), "p%d_preinfP", profileId);
     preinfPressurePsi = preferences.getFloat(key, 20.0f);
