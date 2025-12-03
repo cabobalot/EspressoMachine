@@ -224,7 +224,7 @@ void mainLoop(void * pvParameters) {
 
     tempControl::update();
 
-    dataWebPage::update(currentTemperature - TEMPERATURE_OFFSET, currentPressure, targetTemperature, currentTargetPressure, machineState);
+    dataWebPage::update(currentTemperature - TEMPERATURE_OFFSET, currentPressure, targetTemperature - TEMPERATURE_OFFSET, currentTargetPressure, machineState);
     
     static unsigned long timeLastPrint = 0;
     if (millis() - timeLastPrint >= 1000) {
