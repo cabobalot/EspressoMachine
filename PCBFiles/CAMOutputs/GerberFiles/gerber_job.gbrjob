@@ -1,0 +1,24 @@
+{
+    "Header": {
+        "Comment": "All values are metric (mm)",
+        "CreationDate": "2025-09-17T03:39:16Z",
+        "GenerationSoftware": {
+            "Application": "Fusion Electronics",
+            "Vendor": "Autodesk",
+            "Version": "9.7.0"
+        },
+        "Part": "Single"
+    },
+    "Overall": {
+        "BoardThickness": 1.6608,
+        "LayerNumber": 2,
+        "Name": {
+            "ProjectId": "V_Divider v3"
+        },
+        "Owner": "\"ANDY\" \"TRAN\" <u1301465@utah.edu>",
+        "Size": {
+            "X": 16.49,
+            "Y": 19.99
+        }
+    }
+}
