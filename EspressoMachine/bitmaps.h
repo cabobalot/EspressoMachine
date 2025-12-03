@@ -1,7 +1,7 @@
 #ifndef BITMAPS_H
 #define BITMAPS_H
 
-#include <pgmspace.h>  // ESP32/Arduino 都兼容
+#include <pgmspace.h>  // Compatible with both ESP32/Arduino
 
 // 'coffee', 58x64px
 const unsigned char brew_coffee__ [] PROGMEM = {

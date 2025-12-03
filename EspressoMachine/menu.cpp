@@ -3,7 +3,7 @@
 
 Menu menu;
 Menu* Menu::_self = nullptr;
-const char* Menu::NVS_NAMESPACE = "espresso";  // NVS命名空间
+const char* Menu::NVS_NAMESPACE = "espresso";  // NVS namespace
 
 Menu::Menu() : display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET, 800000UL, 800000UL) {}
 
@@ -40,39 +40,39 @@ void IRAM_ATTR Menu::onAChangeISR() {
 }
 
 void Menu::pollInput() {
-    // === 旋钮累计（保留原逻辑） ===
+    // === Encoder accumulation (keep original logic) ===
     if (_encFired) {
         _stepAccum += (_encUp ? +1 : -1);
         _encFired = false;
     }
     
-    // === 按钮：边沿 + 去抖，只在稳定“抬起->按下”瞬间计一次 ===
+    // === Button: edge detection + debounce, count only once on stable "release->press" transition ===
     unsigned long now = millis();
-    bool rawPressed = !digitalRead(_pinBtn);   // 上拉输入：低电平=按下
+    bool rawPressed = !digitalRead(_pinBtn);   // Pull-up input: LOW = pressed
     
-    // 记录原始读数发生边沿的时刻
+    // Record the time when raw reading edge occurs
     if (rawPressed != _btnPrevRaw) {
         _btnPrevRaw    = rawPressed;
         _btnEdgeTimeMs = now;
     }
     
-    // 原始状态稳定超过去抖时间，才更新“稳定状态”
+    // Update "stable state" only after raw state is stable beyond debounce time
     if ((now - _btnEdgeTimeMs) >= DEBOUNCE_MS ) {
         if (rawPressed != _btnStable) {
             _btnStable = rawPressed;
             
-            if (_btnStable) {               // 稳定地从“未按”->“按下”
-                if (!_btnLatched) {         // 未计过数才计数
-                    _clicked = true;        // 一次性点击事件（供上层 consumeClick() 读取）
-                    _btnLatched = true;     // 锁存，直到松开前不再重复计数
+            if (_btnStable) {               // Stable transition from "not pressed" -> "pressed"
+                if (!_btnLatched) {         // Count only if not already counted
+                    _clicked = true;        // One-time click event (read by consumeClick())
+                    _btnLatched = true;     // Latch, prevent repeated counting until release
                     _pressCount++;
                     
-                    // 可选：串口统计
+                    // Optional: serial statistics
                     Serial.print("Button press #");
                     Serial.println(_pressCount);
                 }
-            } else {                         // 稳定地从“按下”->“松开”
-                _btnLatched = false;        // 解锁，允许下一次按下再计数
+            } else {                         // Stable transition from "pressed" -> "released"
+                _btnLatched = false;        // Unlatch, allow next press to be counted
             }
         }
     }
@@ -97,16 +97,16 @@ bool Menu::consumeClick() {
 void Menu::setState(MenuState s) {
     currentState = s;
     
-    // 重置 listSelection 和 scrollOffset，避免跨页面状态残留
+    // Reset listSelection and scrollOffset to avoid cross-page state residue
     if (s == MAIN_MENU) {
         listSelection = 0;
         scrollOffset = 0;
     } else if (s == SETTING_PAGE || s == MODE_PAGE || s == PROFILE_PAGE) {
-        // 这些页面使用 listSelection，重置为0
+        // These pages use listSelection, reset to 0
         listSelection = 0;
         scrollOffset = 0;
     } else {
-        // STEAM_PAGE, BREW_PAGE, WATER_PAGE 不使用 listSelection，但也重置为0以防万一
+        // STEAM_PAGE, BREW_PAGE, WATER_PAGE don't use listSelection, but reset to 0 just in case
         listSelection = 0;
         scrollOffset = 0;
     }
@@ -158,14 +158,14 @@ void Menu::moveSelection(bool up) {
     if (currentState == SETTING_PAGE && isEditingBrewTemperature) {
             if (up && brewTemperature < 150) brewTemperature++;
             if (!up && brewTemperature > 30) brewTemperature--;
-            // 编辑过程中不保存，只在退出编辑模式时保存
+            // Don't save during editing, only save when exiting edit mode
             return;
         }
     
     if (currentState == SETTING_PAGE && isEditingSteamTemperature) {
             if (up && steamTemperature < 150) steamTemperature++;
             if (!up && steamTemperature > 50) steamTemperature--;
-            // 编辑过程中不保存，只在退出编辑模式时保存
+            // Don't save during editing, only save when exiting edit mode
             return;
         }
 
@@ -173,28 +173,28 @@ void Menu::moveSelection(bool up) {
     if (currentState == SETTING_PAGE && isEditingPressureBrew) {
         if (up  && targetPressurePsiBrew < 150.0f)  targetPressurePsiBrew += 1.0f;
         if (!up && targetPressurePsiBrew >   0.0f)  targetPressurePsiBrew -= 1.0f;
-        // 编辑过程中不保存，只在退出编辑模式时保存
+        // Don't save during editing, only save when exiting edit mode
         return;
     }
     // Editing Steam Percentage
     if (currentState == SETTING_PAGE && isEditingSteamPercentage) {
         if (up  && steamPercentage < 128) steamPercentage += 1;
         if (!up && steamPercentage > 1)   steamPercentage -= 1;
-        // 编辑过程中不保存，只在退出编辑模式时保存
+        // Don't save during editing, only save when exiting edit mode
         return;
     }
     // Editing: Preinf Pressure
     if (currentState == SETTING_PAGE && isEditingPreinfPressure) {
         if (up  && preinfPressurePsi < 150.0f) preinfPressurePsi += 0.5f;
         if (!up && preinfPressurePsi >   0.0f) preinfPressurePsi -= 0.5f;
-        // 编辑过程中不保存，只在退出编辑模式时保存
+        // Don't save during editing, only save when exiting edit mode
         return;
     }
     // Editing: Preinf Time
     if (currentState == SETTING_PAGE && isEditingPreinfTime) {
         if (up  && preinfTimeSec < 60) preinfTimeSec += 1;
         if (!up && preinfTimeSec >  0) preinfTimeSec -= 1;
-        // 编辑过程中不保存，只在退出编辑模式时保存
+        // Don't save during editing, only save when exiting edit mode
         return;
     }
     
@@ -247,18 +247,18 @@ void Menu::moveSelection(bool up) {
         }
       }
  
-    // 滚动逻辑（只对需要滚动的页面有效）
-    // MODE_PAGE和SETTING_PAGE、PROFILE_PAGE不使用滚动（所有项目都能显示）
+    // Scroll logic (only effective for pages that need scrolling)
+    // MODE_PAGE, SETTING_PAGE, PROFILE_PAGE don't use scrolling (all items can be displayed)
     if (currentState == MAIN_MENU) {
         if (listSelection < scrollOffset) {
-            scrollOffset--;  // 向上滚动
+            scrollOffset--;  // Scroll up
         } else if (listSelection >= scrollOffset + MAX_VISIBLE_ITEMS) {
-            scrollOffset++;  // 向下滚动
+            scrollOffset++;  // Scroll down
         }
     }
 }
 float Menu::getTargetTemperature() const {
-    // 向后兼容：返回brew温度（默认）
+    // Backward compatibility: return brew temperature (default)
     return (float)brewTemperature;
 }
 void Menu::setCurrentPressure(float psi) {
@@ -285,7 +285,7 @@ void Menu::select() {
             bool wasEditing = isEditingBrewTemperature;
             isEditingBrewTemperature = !isEditingBrewTemperature;
             if (isEditingBrewTemperature) {
-                // 进入编辑模式，先保存之前可能正在编辑的其他项
+                // Enter edit mode, save other items that might be in edit mode first
                 if (isEditingSteamTemperature || isEditingPressureBrew || 
                     isEditingSteamPercentage || isEditingPreinfPressure || 
                     isEditingPreinfTime) {
@@ -297,14 +297,14 @@ void Menu::select() {
                 isEditingPreinfPressure = false;
                 isEditingPreinfTime     = false;
             } else if (wasEditing) {
-                // 退出编辑模式，保存设置
+                // Exit edit mode, save settings
                 saveSettings();
             }
         } else if (listSelection == 1) { // SteamTemp
             bool wasEditing = isEditingSteamTemperature;
             isEditingSteamTemperature = !isEditingSteamTemperature;
             if (isEditingSteamTemperature) {
-                // 进入编辑模式，先保存之前可能正在编辑的其他项
+                // Enter edit mode, save other items that might be in edit mode first
                 if (isEditingBrewTemperature || isEditingPressureBrew || 
                     isEditingSteamPercentage || isEditingPreinfPressure || 
                     isEditingPreinfTime) {
@@ -316,14 +316,14 @@ void Menu::select() {
                 isEditingPreinfPressure = false;
                 isEditingPreinfTime     = false;
             } else if (wasEditing) {
-                // 退出编辑模式，保存设置
+                // Exit edit mode, save settings
                 saveSettings();
             }
         } else if (listSelection == 2) { // BrewPressure
             bool wasEditing = isEditingPressureBrew;
             isEditingPressureBrew = !isEditingPressureBrew;
             if (isEditingPressureBrew) {
-                // 进入编辑模式，先保存之前可能正在编辑的其他项
+                // Enter edit mode, save other items that might be in edit mode first
                 if (isEditingBrewTemperature || isEditingSteamTemperature || 
                     isEditingSteamPercentage || isEditingPreinfPressure || 
                     isEditingPreinfTime) {
@@ -335,14 +335,14 @@ void Menu::select() {
                 isEditingPreinfPressure = false;
                 isEditingPreinfTime     = false;
             } else if (wasEditing) {
-                // 退出编辑模式，保存设置
+                // Exit edit mode, save settings
                 saveSettings();
             }
         } else if (listSelection == 3) { // SteamPercentage
             bool wasEditing = isEditingSteamPercentage;
             isEditingSteamPercentage = !isEditingSteamPercentage;
             if (isEditingSteamPercentage) {
-                // 进入编辑模式，先保存之前可能正在编辑的其他项
+                // Enter edit mode, save other items that might be in edit mode first
                 if (isEditingBrewTemperature || isEditingSteamTemperature || 
                     isEditingPressureBrew || isEditingPreinfPressure || 
                     isEditingPreinfTime) {
@@ -354,14 +354,14 @@ void Menu::select() {
                 isEditingPreinfPressure = false;
                 isEditingPreinfTime     = false;
             } else if (wasEditing) {
-                // 退出编辑模式，保存设置
+                // Exit edit mode, save settings
                 saveSettings();
             }
         } else if (listSelection == 4) { // PreinfPress
             bool wasEditing = isEditingPreinfPressure;
             isEditingPreinfPressure = !isEditingPreinfPressure;
             if (isEditingPreinfPressure) {
-                // 进入编辑模式，先保存之前可能正在编辑的其他项
+                // Enter edit mode, save other items that might be in edit mode first
                 if (isEditingBrewTemperature || isEditingSteamTemperature || 
                     isEditingPressureBrew || isEditingSteamPercentage || 
                     isEditingPreinfTime) {
@@ -373,14 +373,14 @@ void Menu::select() {
                 isEditingSteamPercentage  = false;
                 isEditingPreinfTime     = false;
             } else if (wasEditing) {
-                // 退出编辑模式，保存设置
+                // Exit edit mode, save settings
                 saveSettings();
             }
         } else if (listSelection == 5) { // PreinfTime
             bool wasEditing = isEditingPreinfTime;
             isEditingPreinfTime = !isEditingPreinfTime;
             if (isEditingPreinfTime) {
-                // 进入编辑模式，先保存之前可能正在编辑的其他项
+                // Enter edit mode, save other items that might be in edit mode first
                 if (isEditingBrewTemperature || isEditingSteamTemperature || 
                     isEditingPressureBrew || isEditingSteamPercentage || 
                     isEditingPreinfPressure) {
@@ -392,23 +392,23 @@ void Menu::select() {
                 isEditingSteamPercentage  = false;
                 isEditingPreinfPressure = false;
             } else if (wasEditing) {
-                // 退出编辑模式，保存设置
+                // Exit edit mode, save settings
                 saveSettings();
             }
-        } else if (listSelection == 6) { // Default - 只重置当前profile为默认值
-            // 只重置当前profile的值，不影响其他profile
+        } else if (listSelection == 6) { // Default - only reset current profile to default values
+            // Only reset current profile values, don't affect other profiles
             brewTemperature = 70;
             steamTemperature = 140;
             targetPressurePsiBrew = 40.0f;
-            steamPercentage = 64;  // 默认50%
+            steamPercentage = 2;  // Default 2%
             preinfPressurePsi = 20.0f;
             preinfTimeSec = 5;
-            // 不改变currentProfileId，保持当前选中的profile
-            // 保存重置后的值到当前profile
+            // Don't change currentProfileId, keep currently selected profile
+            // Save reset values to current profile
             saveSettings();
             Serial.println("Current profile reset to default values");
         } else if (listSelection == 7) { // Back
-            // 退出设置页面时，如果还在编辑模式，先保存
+            // When exiting settings page, if still in edit mode, save first
             if (isEditingBrewTemperature || isEditingSteamTemperature || 
                 isEditingPressureBrew || isEditingSteamPercentage || 
                 isEditingPreinfPressure || isEditingPreinfTime) {
@@ -429,7 +429,7 @@ void Menu::select() {
         if (listSelection >= 0 && listSelection <= 3) {  // Profile 1-4
             uint8_t profileId = listSelection + 1;  // 1-4
             
-            // 检查profile是否存在
+            // Check if profile exists
             char key[32];
             snprintf(key, sizeof(key), "p%d_exists", profileId);
             bool profileExists = false;
@@ -438,29 +438,29 @@ void Menu::select() {
                 preferences.end();
             }
             
-            // 如果profile不存在，这是第一次选中，需要创建它
+            // If profile doesn't exist, this is the first time selecting it, need to create it
             if (!profileExists) {
-            // 使用默认值创建新profile
+            // Create new profile with default values
             brewTemperature = 70;
             steamTemperature = 140;
             targetPressurePsiBrew = 40.0f;
-            steamPercentage = 64;  // 默认50%
+            steamPercentage = 2;  // Default 2%
             preinfPressurePsi = 20.0f;
             preinfTimeSec = 5;
-                // 设置currentProfileId为新profile
+                // Set currentProfileId to new profile
                 currentProfileId = profileId;
-                // 保存默认设置到新profile（创建profile）
+                // Save default settings to new profile (create profile)
                 saveProfile(profileId);
                 Serial.print("Profile ");
                 Serial.print(profileId);
                 Serial.println(" created for the first time with default values");
             } else {
-                // Profile已存在，加载它
-                currentProfileId = profileId;  // 先设置currentProfileId
+                // Profile exists, load it
+                currentProfileId = profileId;  // Set currentProfileId first
                 loadProfile(profileId);
             }
             
-            saveCurrentProfileId();  // 保存当前profile ID
+            saveCurrentProfileId();  // Save current profile ID
             currentState = MAIN_MENU;
             listSelection = 0;
             scrollOffset = 0;
@@ -472,15 +472,15 @@ void Menu::select() {
     }
     else if (currentState == MODE_PAGE) {
         if (listSelection == 0) {          // Steam
-            currentState = STEAM_PAGE;     // ← 切到 Steam 页面
+            currentState = STEAM_PAGE;     // Switch to Steam page
         } else if (listSelection == 1) {  // Brew
-            currentState = BREW_PAGE;    // ← 切换状态
+            currentState = BREW_PAGE;    // Switch state
             brewStartTime = millis();
         } else if (listSelection == 2) {   // Water
-            currentState = WATER_PAGE;     // <--- 新增
+            currentState = WATER_PAGE;     // New
             waterStartTime = millis();
         } else if (listSelection == 3) {  
-            // 选中 Back 返回主菜单
+            // Select Back to return to main menu
             currentState = MAIN_MENU;
             listSelection = 0;
             scrollOffset = 0;
@@ -492,11 +492,11 @@ void Menu::showMainMenu() {
     display.setCursor(0, 0);
     display.setTextSize(1);
     for (int i = 0; i < MAX_VISIBLE_ITEMS; i++) {
-        int itemIndex = scrollOffset + i;  // 计算当前要显示的菜单项索引
+        int itemIndex = scrollOffset + i;  // Calculate current menu item index to display
         
         if (itemIndex < MAX_MENU_ITEMS) {
             if (itemIndex == listSelection) {
-                display.setTextColor(SH110X_BLACK, SH110X_WHITE);  // 选中项反色显示
+                display.setTextColor(SH110X_BLACK, SH110X_WHITE);  // Invert color for selected item
             } else {
                 display.setTextColor(SH110X_WHITE);
             }
@@ -507,7 +507,7 @@ void Menu::showMainMenu() {
 void Menu::showModePage() {
     display.setCursor(0, 0);
     display.setTextSize(1);
-    // 显示所有4个mode选项，不使用滚动
+    // Display all 4 mode options, no scrolling
     for (int i = 0; i < MAX_MODE_ITEMS; i++) {
         if (i == listSelection) {
             display.setTextColor(SH110X_BLACK, SH110X_WHITE);
@@ -525,7 +525,7 @@ void Menu::showSettingPage() {
     
     for (int i = 0; i < MAX_SETTING_ITEMS; i++) {
         if (i == listSelection) {
-            display.setTextColor(SH110X_BLACK, SH110X_WHITE);  // 反色显示选中项
+            display.setTextColor(SH110X_BLACK, SH110X_WHITE);  // Invert color for selected item
         } else {
             display.setTextColor(SH110X_WHITE);
         }
@@ -569,19 +569,19 @@ void Menu::showProfilePage() {
     
     for (int i = 0; i < MAX_PROFILE_ITEMS; i++) {
         if (i == listSelection) {
-            display.setTextColor(SH110X_BLACK, SH110X_WHITE);  // 反色显示选中项
+            display.setTextColor(SH110X_BLACK, SH110X_WHITE);  // Invert color for selected item
         } else {
             display.setTextColor(SH110X_WHITE);
         }
         
-        // *标识表示当前选中的profile（currentProfileId）
+        // * indicates currently selected profile (currentProfileId)
         if (i >= 0 && i <= 3) {
             uint8_t profileId = i + 1;
             
             display.print(profileMenuItems[i]);
-            // 只有当前选中的profile才显示*标识
+            // Only show * for currently selected profile
             if (currentProfileId == profileId) {
-                display.print(" *");  // 标记当前选中的档案
+                display.print(" *");  // Mark currently selected profile
             }
             display.println();
         } else {
@@ -616,15 +616,15 @@ void Menu::showSidebarInfo() {
 void Menu::showBrewPage() {
     unsigned long now = millis();
     if (now - lastFrameTime > frameInterval) {
-        currentFrame = (currentFrame + 1) % 2;  // 两帧循环切换
+        currentFrame = (currentFrame + 1) % 2;  // Cycle between two frames
         lastFrameTime = now;
     }
     
     const unsigned char* frame = (currentFrame == 0) ? brew_coffee__ : brew_coffee__1;
-    // 显示图像（居中）
+    // Display image (centered)
     display.drawBitmap(0, 0, frame, 58, 64, SH110X_WHITE);
     
-    // 倒计时计算
+    // Countdown calculation
     display.setCursor(70, 0);
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
@@ -696,9 +696,8 @@ void Menu::showWaterPage() {
         lastFrameTime = now;
     }
 
-    display.drawBitmap(0, 0, water, 58, 64, SH110X_WHITE);
+    display.drawBitmap(0, 0, steam_2, 58, 64, SH110X_WHITE);
 
-    // Side bar
     display.setCursor(70, 0);
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
@@ -715,21 +714,21 @@ void Menu::showWaterPage() {
     display.print(brewTemperature);
     display.println("C");
 
-    display.setCursor(60, 36);
-    display.print("Cur: ");
+    display.setCursor(57, 36);
+    display.print("CurT:");
     display.print(currentTemperature);
     display.println("C");
 
-    display.setCursor(60, 48);
-    display.print("Cur :");
+    display.setCursor(57, 48);
+    display.print("CurP:");
     display.print(currentPressurePsi);
     display.println("P");
 }
 
-// ==================== 设置持久化存储 ====================
+// ==================== Settings Persistence Storage ====================
 
 void Menu::saveSettings() {
-    // 保存到当前profile（如果当前是profile 0，则保存到默认设置）
+    // Save to current profile (if current is profile 0, save to default settings)
     Serial.print("saveSettings() called, currentProfileId=");
     Serial.println(currentProfileId);
     Serial.print("Current values to save: brewTemp=");
@@ -749,23 +748,23 @@ void Menu::saveSettings() {
 }
 
 void Menu::loadSettings() {
-    // 先加载上次使用的profile ID
+    // First load the last used profile ID
     loadCurrentProfileId();
     Serial.print("loadSettings() - Loaded currentProfileId: ");
     Serial.println(currentProfileId);
     
-    // 如果是第一次打开（currentProfileId为0或无效），使用profile 1
+    // If first time opening (currentProfileId is 0 or invalid), use profile 1
     if (currentProfileId == 0 || currentProfileId > 4) {
         currentProfileId = 1;
         Serial.println("First time opening, using profile 1");
     }
     
-    // 加载对应的profile（如果不存在则使用默认值）
+    // Load corresponding profile (use default values if doesn't exist)
     loadProfile(currentProfileId);
 }
 
 void Menu::saveProfile(uint8_t profileId) {
-    // profileId必须为1-4，不再使用profile 0
+    // profileId must be 1-4, profile 0 is no longer used
     if (profileId == 0 || profileId > 4) {
         Serial.print("Invalid profileId: ");
         Serial.println(profileId);
@@ -777,7 +776,7 @@ void Menu::saveProfile(uint8_t profileId) {
         return;
     }
     
-    // 构建键名：使用"pX_xxx"格式
+    // Build key names: use "pX_xxx" format
     char key[32];
     
     Serial.print("Saving to profile ID: ");
@@ -795,7 +794,7 @@ void Menu::saveProfile(uint8_t profileId) {
     Serial.print(", preinfT=");
     Serial.println(preinfTimeSec);
     
-    // 保存用户档案（profileId 1-4）
+    // Save user profiles (profileId 1-4)
     bool allSuccess = true;
     bool result;
     
@@ -847,7 +846,7 @@ void Menu::saveProfile(uint8_t profileId) {
         allSuccess = false;
     }
     
-    // 标记档案存在
+    // Mark profile as existing
     snprintf(key, sizeof(key), "p%d_exists", profileId);
     result = preferences.putBool(key, true);
     if (!result) {
@@ -869,15 +868,15 @@ void Menu::saveProfile(uint8_t profileId) {
 }
 
 void Menu::loadProfile(uint8_t profileId) {
-    // profileId必须为1-4，不再使用profile 0
+    // profileId must be 1-4, profile 0 is no longer used
     if (profileId == 0 || profileId > 4) {
         Serial.print("Invalid profileId for loading: ");
         Serial.println(profileId);
-        // 使用默认值
+        // Use default values
         brewTemperature = 70;
         steamTemperature = 140;
         targetPressurePsiBrew = 40.0f;
-        steamPercentage = 64;  // 默认50%
+        steamPercentage = 64;  // Default 50%
         preinfPressurePsi = 20.0f;
         preinfTimeSec = 5;
         return;
@@ -893,31 +892,31 @@ void Menu::loadProfile(uint8_t profileId) {
     
     char key[32];
     
-    // 加载用户档案（profileId 1-4）
+    // Load user profiles (profileId 1-4)
     snprintf(key, sizeof(key), "p%d_exists", profileId);
     bool profileExists = preferences.getBool(key, false);
     
     if (!profileExists) {
-        // Profile不存在，使用默认值，但保持currentProfileId不变
+        // Profile doesn't exist, use default values, but keep currentProfileId unchanged
         Serial.print("Profile ");
         Serial.print(profileId);
         Serial.println(" does not exist, using default values");
         
-        // 使用默认值
+        // Use default values
         brewTemperature = 70;
         steamTemperature = 140;
         targetPressurePsiBrew = 40.0f;
-        steamPercentage = 64;  // 默认50%
+        steamPercentage = 64;  // Default 50%
         preinfPressurePsi = 20.0f;
         preinfTimeSec = 5;
         
-        // 保持currentProfileId不变（这样在setting page显示的是当前profile）
+        // Keep currentProfileId unchanged (so setting page shows current profile)
         preferences.end();
         return;
     }
         
-    // Profile存在，加载其值
-    // 兼容旧数据：如果存在"p%d_temp"键，加载为brewTemp
+    // Profile exists, load its values
+    // Backward compatibility: if "p%d_temp" key exists, load as brewTemp
     snprintf(key, sizeof(key), "p%d_temp", profileId);
     if (preferences.isKey(key)) {
         brewTemperature = preferences.getUChar(key, 70);
@@ -932,12 +931,12 @@ void Menu::loadProfile(uint8_t profileId) {
     snprintf(key, sizeof(key), "p%d_brewP", profileId);
     targetPressurePsiBrew = preferences.getFloat(key, 40.0f);
     
-    // 兼容旧数据：如果存在"p%d_steamP"键（PSI值），转换为百分比；否则加载新的百分比值
+    // Backward compatibility: if "p%d_steamP" key exists (PSI value), convert to percentage; otherwise load new percentage value
     snprintf(key, sizeof(key), "p%d_steamP", profileId);
     if (preferences.isKey(key)) {
-        // 旧数据：PSI值，转换为百分比（简单映射：25 PSI -> 64 (50%)）
+        // Old data: PSI value, convert to percentage (simple mapping: 25 PSI -> 64 (50%))
         float oldSteamP = preferences.getFloat(key, 25.0f);
-        steamPercentage = (uint8_t)((oldSteamP / 25.0f) * 64.0f);  // 简单转换
+        steamPercentage = (uint8_t)((oldSteamP / 25.0f) * 64.0f);  // Simple conversion
         if (steamPercentage < 1) steamPercentage = 1;
         if (steamPercentage > 128) steamPercentage = 128;
         Serial.print("Migrated old steamP value ");
@@ -946,7 +945,7 @@ void Menu::loadProfile(uint8_t profileId) {
         Serial.println(steamPercentage);
     } else {
         snprintf(key, sizeof(key), "p%d_steamPct", profileId);
-        steamPercentage = preferences.getUChar(key, 64);  // 默认50%
+        steamPercentage = preferences.getUChar(key, 2);  // Default 2%
         if (steamPercentage < 1) steamPercentage = 1;
         if (steamPercentage > 128) steamPercentage = 128;
     }
@@ -957,7 +956,7 @@ void Menu::loadProfile(uint8_t profileId) {
     snprintf(key, sizeof(key), "p%d_preinfT", profileId);
     preinfTimeSec = preferences.getUShort(key, 5);
     
-    // 不在这里设置currentProfileId，因为调用者已经设置了
+    // Don't set currentProfileId here, caller has already set it
     
     Serial.print("Settings loaded from profile ");
     Serial.println(profileId);
@@ -966,14 +965,14 @@ void Menu::loadProfile(uint8_t profileId) {
 }
 
 void Menu::resetToDefaults() {
-    // 恢复所有设置为默认值（不改变currentProfileId）
+    // Restore all settings to default values (don't change currentProfileId)
     brewTemperature = 70;
     steamTemperature = 140;
     targetPressurePsiBrew = 40.0f;
-    steamPercentage = 2;  // 默认50%
+    steamPercentage = 2;  // Default 2%
     preinfPressurePsi = 20.0f;
     preinfTimeSec = 5;
-    // 不改变currentProfileId，保持当前选中的profile
+    // Don't change currentProfileId, keep currently selected profile
     
     Serial.println("Settings reset to defaults");
 }
@@ -988,7 +987,7 @@ void Menu::checkAndSaveSettings() {
         return;
     }
     
-    // 如果距离上次修改超过延迟时间，则保存
+    // Save if delay time has passed since last modification
     unsigned long now = millis();
     if (now - lastSaveTime >= SAVE_DELAY_MS) {
         saveSettings();

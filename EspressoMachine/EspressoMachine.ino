@@ -27,16 +27,16 @@ void screenShowLoop(void * pvParameters);
 
 static volatile float targetTemperature = 95;
 static volatile float targetPressureBrew  = 120.0f;
-static volatile uint8_t steamPercentage = 64;  // 1-128, 默认50%
+static volatile uint8_t steamPercentage = 2;  // 1-128, default 2%
 static volatile float currentTemperature = 0;
 static volatile float currentPressure = 0;
 
 static volatile float preinfusePressure = 25;
 static volatile unsigned long preinfuseTime = 10;
 
-// Brew模式压力控制：记录brew开始时间，用于切换预浸泡和正常压力
+// Brew mode pressure control: record brew start time for switching between preinfusion and normal pressure
 static volatile unsigned long brewStartTimeMs = 0;
-static volatile float currentTargetPressure = 0.0f;  // 当前实际使用的目标压力（用于串口输出）
+static volatile float currentTargetPressure = 0.0f;  // Currently used target pressure (for serial output)
 
 
 static volatile MachineState machineState = IDLE_STATE;
@@ -76,7 +76,7 @@ void uiLoop(void * pvParameters) {
   pinMode(PIN_SWITCH_BREW, INPUT_PULLUP);
   pinMode(PIN_SWITCH_STEAM, INPUT_PULLUP);
 
-  // 加载保存的设置
+  // Load saved settings
   menu.loadSettings();
 
   for(;;) {
@@ -89,11 +89,11 @@ void uiLoop(void * pvParameters) {
     if (menu.consumeClick()) menu.select();
 
     // Targets from UI
-    // 根据当前模式选择对应的温度
+    // Select corresponding temperature based on current mode
     if (machineState == STEAM_STATE) {
       targetTemperature = menu.getTargetTemperatureSteam() + TEMPERATURE_OFFSET;
     } else {
-      // BREW_STATE, IDLE_STATE, HOT_WATER_STATE 使用brew温度
+      // BREW_STATE, IDLE_STATE, HOT_WATER_STATE use brew temperature
       targetTemperature = menu.getTargetTemperatureBrew() + TEMPERATURE_OFFSET;
     }
     targetPressureBrew  = menu.getTargetPressureBrew();
@@ -126,13 +126,13 @@ void uiLoop(void * pvParameters) {
     // --- Unified decision (priority: BOTH -> WATER, else single) ---
     MachineState nextState = machineState;
     if (brewStable && steamStable) {
-      nextState = HOT_WATER_STATE;            // Water 模式：两键同按
+      nextState = HOT_WATER_STATE;            // Water mode: both keys pressed
     } else if (brewStable) {
-      nextState = BREW_STATE;                 // 仅 Brew 键按下
+      nextState = BREW_STATE;                 // Only Brew key pressed
     } else if (steamStable) {
-      nextState = STEAM_STATE;                // 仅 Steam 键按下
+      nextState = STEAM_STATE;                // Only Steam key pressed
     } else {
-      nextState = IDLE_STATE;                 // 都没按
+      nextState = IDLE_STATE;                 // Neither pressed
     }
 
     // --- Apply transition once (and set the correct page) ---
@@ -141,7 +141,7 @@ void uiLoop(void * pvParameters) {
 
       switch (machineState) {
         case BREW_STATE:
-          brewStartTimeMs = millis();  // 记录brew开始时间
+          brewStartTimeMs = millis();  // Record brew start time
           menu.setState(BREW_PAGE);
           menu.resetBrewAnimation();
           break;
@@ -149,7 +149,7 @@ void uiLoop(void * pvParameters) {
           menu.setState(STEAM_PAGE);
           break;
         case HOT_WATER_STATE:
-          menu.setState(WATER_PAGE);          // 两键同按 -> 进 Water 页面
+          menu.setState(WATER_PAGE);          // Both keys pressed -> enter Water page
           break;
         case IDLE_STATE:
         default:
@@ -187,15 +187,15 @@ void mainLoop(void * pvParameters) {
       break;
     case BREW_STATE:
       {
-        // 计算brew已运行时间（毫秒）
+        // Calculate brew elapsed time (milliseconds)
         unsigned long brewElapsedMs = millis() - brewStartTimeMs;
-        unsigned long preinfuseTimeMs = preinfuseTime * 1000;  // 转换为毫秒
+        unsigned long preinfuseTimeMs = preinfuseTime * 1000;  // Convert to milliseconds
         
-        // 前5秒使用预浸泡压力（20 PSI），之后使用70 PSI
+        // Use preinfusion pressure (20 PSI) for first 5 seconds, then use 70 PSI
         if (brewElapsedMs < preinfuseTimeMs) {
           currentTargetPressure = preinfusePressure;  // 20 PSI
         } else {
-          currentTargetPressure = targetPressureBrew;  // 5秒后切换到70 PSI
+          currentTargetPressure = targetPressureBrew;  // Switch to 70 PSI after 5 seconds
         }
         
         pc.setSetpoint(currentTargetPressure);
@@ -203,11 +203,11 @@ void mainLoop(void * pvParameters) {
       }
       break;
     case STEAM_STATE:
-      // Steam模式使用百分比直接控制，不使用PID
+      // Steam mode uses percentage for direct control, doesn't use PID
       pc.setPercentage(steamPercentage);
       digitalWrite(PIN_SOLENOID, LOW);
-      // currentTargetPressure 用于显示，可以设置为百分比对应的值（可选）
-      currentTargetPressure = (float)steamPercentage;  // 显示百分比值
+      // currentTargetPressure is for display, can be set to percentage value (optional)
+      currentTargetPressure = (float)steamPercentage;  // Display percentage value
       break;
     case HOT_WATER_STATE:
       pc.setAlwaysOn();

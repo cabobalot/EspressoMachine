@@ -2,19 +2,19 @@
 
 PressureControl::PressureControl(double kp, double ki, double kd)
 : pid_(&currentPsi_, &outputPct_, &setpointPsi_, kp, ki, kd, DIRECT) {
-  // 输出范围限定为单向（只能“加压/加热”）
+  // Output range limited to unidirectional (only "pressurize/heat")
   pid_.SetOutputLimits(0, 100);         // 0..100 %
-  pid_.SetSampleTime(kCtrlMs);          // 与调度周期一致
+  pid_.SetSampleTime(kCtrlMs);          // Consistent with scheduling period
 }
 
 void PressureControl::init(uint8_t controlPin, uint8_t zeroCrossPin) {
-  // 初始化 PSM（零过零整周跳变调功）
+  // Initialize PSM (zero-crossing full-cycle skip power control)
   psm::config(controlPin, zeroCrossPin);
 
-  // 启动 PID 自动模式
+  // Start PID automatic mode
   pid_.SetMode(AUTOMATIC);
 
-  // 初始输出清零
+  // Clear initial output
   outputPct_ = 0;
   psm::setValue(0);
 }
@@ -22,29 +22,29 @@ void PressureControl::init(uint8_t controlPin, uint8_t zeroCrossPin) {
 
 // setting mode to manual and automatic should prevent integral windup
 void PressureControl::setSetpoint(double psi) {
-  isPercentageMode_ = false;  // 切换到PID模式
+  isPercentageMode_ = false;  // Switch to PID mode
   pid_.SetMode(AUTOMATIC);
   setpointPsi_ = psi;
 }
 
 void PressureControl::setPercentage(uint8_t percentage) {
-  // 限制范围 1-128
+  // Limit range 1-128
   if (percentage < 1) percentage = 1;
   if (percentage > 128) percentage = 128;
   
-  isPercentageMode_ = true;  // 切换到百分比模式
-  pid_.SetMode(MANUAL);  // 禁用PID，避免干扰
+  isPercentageMode_ = true;  // Switch to percentage mode
+  pid_.SetMode(MANUAL);  // Disable PID to avoid interference
   steamPercentage_ = percentage;
 }
 
 void PressureControl::setAlwaysOn() {
-  isPercentageMode_ = false;  // 退出百分比模式
+  isPercentageMode_ = false;  // Exit percentage mode
   pid_.SetMode(MANUAL);
   outputPct_ = 100;
 }
 
 void PressureControl::setAlwaysOff() {
-  isPercentageMode_ = false;  // 退出百分比模式
+  isPercentageMode_ = false;  // Exit percentage mode
   pid_.SetMode(MANUAL);
   outputPct_ = 0;
 }
@@ -64,24 +64,24 @@ void PressureControl::update() {
     // Serial.println(currentPsi_);
 
     if (isPercentageMode_) {
-      // Steam模式：直接使用百分比，不计算PID
+      // Steam mode: directly use percentage, don't calculate PID
       psm::setValue(steamPercentage_);
     } else {
-      // Brew模式或其他模式：使用PID控制或直接输出
+      // Brew mode or other modes: use PID control or direct output
       if (pid_.GetMode() == AUTOMATIC) {
-        pid_.Compute();   // 计算 0..100%
+        pid_.Compute();   // Calculate 0..100%
       }
-      // 把百分比送给 dimmer（PSM）
+      // Send percentage to dimmer (PSM)
       const uint16_t v = pctToPsm(outputPct_);
-      // 如果是MANUAL模式（setAlwaysOn/Off），直接使用outputPct_；否则检查setpoint
+      // If MANUAL mode (setAlwaysOn/Off), directly use outputPct_; otherwise check setpoint
       if (pid_.GetMode() == MANUAL) {
-        psm::setValue(v);  // MANUAL模式：直接使用outputPct_
+        psm::setValue(v);  // MANUAL mode: directly use outputPct_
       } else {
-        psm::setValue(setpointPsi_ ? v : 0); // AUTOMATIC模式：zero setpoint -> zero output
+        psm::setValue(setpointPsi_ ? v : 0); // AUTOMATIC mode: zero setpoint -> zero output
       }
     }
   }
 
-  // PSM 需要每圈都 update 来跟过零节拍
+  // PSM needs update every cycle to follow zero-crossing timing
   psm::update();
 }

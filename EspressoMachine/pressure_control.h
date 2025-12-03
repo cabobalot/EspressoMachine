@@ -9,15 +9,15 @@
 
 class PressureControl {
 public:
-  // 执行端与 PID 的基本参数
-  static constexpr uint32_t kCtrlMs   = 17;     // 控制周期 50ms
-  static constexpr uint16_t kPsmRange = 128;    // PSM 档位（1-128）
+  // Basic parameters for actuator and PID
+  static constexpr uint32_t kCtrlMs   = 17;     // Control period 50ms
+  static constexpr uint16_t kPsmRange = 128;    // PSM range (1-128)
 
   PressureControl(double kp, double ki, double kd);
 
-  void init(uint8_t controlPin, uint8_t zeroCrossPin);   // 初始化：PID + PSM
+  void init(uint8_t controlPin, uint8_t zeroCrossPin);   // Initialize: PID + PSM
   void setSetpoint(double psi);
-  void setPercentage(uint8_t percentage);  // 设置百分比模式（1-128），用于steam模式
+  void setPercentage(uint8_t percentage);  // Set percentage mode (1-128), for steam mode
   
   void setAlwaysOn();
   void setAlwaysOff();
@@ -29,23 +29,23 @@ public:
   double getOutputPct() const { return outputPct_; }
 
 private:
-  // PID 变量
+  // PID variables
   double currentPsi_  = 0.0;
   double setpointPsi_ = 0.0;
   double outputPct_   = 0.0;
 
-  // PID 控制器
+  // PID controller
   PID pid_;
 
-  // 调度
+  // Scheduling
   unsigned long prevMs_ = 0;
 
-  // 百分比模式（用于steam模式）
+  // Percentage mode (for steam mode)
   bool isPercentageMode_ = false;
   uint8_t steamPercentage_ = 0;  // 1-128
 
 
-  // 把 0..100% 映射到 PSM 档位（0..kPsmRange）
+  // Map 0..100% to PSM range (0..kPsmRange)
   static inline uint16_t pctToPsm(double pct) {
     if (!isfinite(pct)) pct = 0;
     if (pct < 0) pct = 0; if (pct > 100) pct = 100;
